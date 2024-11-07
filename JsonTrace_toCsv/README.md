@@ -41,7 +41,7 @@ Here's an example of the JSON format:(one frame)
 ```
 2. **CSV**
 Here's an example of the CSV format converted:
-![openxr gaussian viewer](./Csv_example.jpg)
+![Csv_example](Csv_example.png)
 
 ## Installation
 

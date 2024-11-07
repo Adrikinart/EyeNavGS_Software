@@ -60,6 +60,7 @@ namespace sibr
 
 	public:
 
+
 		/// Update callback for a standard view. Passes the view pointer, the correct input state, and the correct viewport.
 		typedef  std::function<void(sibr::ViewBase::Ptr &, sibr::Input&, const sibr::Viewport&, const float)> ViewUpdateFunc;
 		/// Update callback for an IBR view, see main description for the return value.
@@ -410,6 +411,10 @@ namespace sibr
 		 * \param win The OS window into which the rendering should be performed.
 		 */
 		void	onRender(Window& win) override;
+
+		void StartRec(const std::string& path);
+
+		void EndRec();
 
 		/**
 		 * \brief Render menus and additional gui

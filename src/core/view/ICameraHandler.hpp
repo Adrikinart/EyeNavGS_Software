@@ -34,6 +34,7 @@ namespace sibr {
 
 	public:
 
+
 		/** Update the camera handler state.
 		\param input user input
 		\param deltaTime time elapsed since last udpate

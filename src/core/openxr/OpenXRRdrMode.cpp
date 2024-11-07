@@ -11,6 +11,9 @@
 #include <core/assets/Resources.hpp>
 #include <core/openxr/OpenXRRdrMode.hpp>
 #include <core/openxr/SwapchainImageRenderTarget.hpp>
+#include <fstream>
+#include <sstream>
+#include <opencv2/opencv.hpp>
 
 namespace sibr
 {
@@ -41,6 +44,7 @@ namespace sibr
 
     OpenXRRdrMode::OpenXRRdrMode(sibr::Window &window)
     {
+        XRwindow = &window;
         m_quadShader.init("Texture",
                           sibr::loadFile(sibr::Resources::Instance()->getResourceFilePathName("texture.vp")),
                           sibr::loadFile(sibr::Resources::Instance()->getResourceFilePathName("texture.fp")));
@@ -68,14 +72,70 @@ namespace sibr
                                            { m_appFocused = false; });
         m_openxrHmd->setFocusedAppCallback([this]()
                                            { m_appFocused = true; });
+        
+        
+        
     }
 
     OpenXRRdrMode::~OpenXRRdrMode()
-    {
+    {/**/
         m_RTPool.clear();
         m_openxrHmd->closeSession();
         m_openxrHmd->terminate();
     }
+
+     //Load Trace from CSV file  
+    void OpenXRRdrMode::loadViewData(ViewData& view)
+    { 
+        //miss the first line header
+        std::string header;
+        std::getline(inFile, header);
+        
+        std::string line;
+        //get the next line every frame
+        if (std::getline(inFile, line)) {
+            //using a stream to store the line
+            std::istringstream lineStream(line);
+            std::string token;
+
+            //miss the ViewIndex
+            std::getline(lineStream, token, ',');
+            
+
+            // Read FOV
+            for (int i = 0; i < 4; ++i) {
+                std::getline(lineStream, token, ',');
+                view.fov(i) = std::stof(token);
+            }
+
+            // Read Position
+            for (int i = 0; i < 3; ++i) {
+                std::getline(lineStream, token, ',');
+                view.position(i) = std::stof(token);
+            }
+
+            // Read Quaternion
+            for (int i = 0; i < 4; ++i) {
+                std::getline(lineStream, token, ',');
+                view.quaternion.coeffs()(i) = std::stof(token);
+            }
+        }
+        else {
+
+            if (leftEyeVideoWriter.isOpened()) {
+                leftEyeVideoWriter.release();
+            }
+            if (rightEyeVideoWriter.isOpened()) {
+                rightEyeVideoWriter.release();
+            }
+            // Handle the end of file or read error
+            PlayMode = 1;
+            inFile.close();
+            SIBR_LOG << "Replay Finished!" << std::endl;
+            exit(0);
+        }
+    }
+
 
     void OpenXRRdrMode::render(ViewBase &view, const sibr::Camera &camera, const sibr::Viewport &viewport, IRenderTarget *optDest)
     {
@@ -104,14 +164,35 @@ namespace sibr
         m_openxrHmd->submitFrame([this, w, h, &view, &camera, optDest](int viewIndex, uint32_t texture)
                                  {
                                      OpenXRHMD::Eye eye = viewIndex == 0 ? OpenXRHMD::Eye::LEFT : OpenXRHMD::Eye::RIGHT;
-
+                                    /*
                                      auto fov = this->m_openxrHmd->getFieldOfView(eye);
                                      auto q = this->m_openxrHmd->getPoseQuaternion(eye);
                                      auto pos = this->m_openxrHmd->getPosePosition(eye);
+                                    */
+                                     //Call loadViewData to replay
+                                     ViewData viewData;
+                                     if (PlayMode == 2) {
+                                         loadViewData(viewData);
+                                         
+                                     }
+                                     //playMode == 2, Replay; playMode == 0 or 1, HMD controls;
+                                     auto fov = PlayMode == 2 ? viewData.fov : this->m_openxrHmd->getFieldOfView(eye);
+                                     auto q = PlayMode == 2 ? viewData.quaternion : this->m_openxrHmd->getPoseQuaternion(eye);
+                                     auto pos = PlayMode == 2 ? viewData.position : this->m_openxrHmd->getPosePosition(eye);
+
                                      // OpenXR eye position is in world coordinates system (+x: right, +y: up; +z: backward)
                                      // 3DGS reference scenes have the following coordinate system : +x: right, +y: down, +z: forward
                                      // Let's rotate the camera to have the right-side up scene
-                                     if (m_flipY)
+                                     
+                                    //-----save position and quaternion to file
+                                    
+                                     if (PlayMode == 0)
+                                         outFile << viewIndex << "," // View index
+                                         << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
+                                         << pos.x() << "," << pos.y() << "," << pos.z() << ","
+                                         << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << "\n";
+                                     
+                                     if (true)
                                      {
                                          Eigen::Matrix3f mat;
                                          mat << 1.0f, 0.0f, 0.0f,
@@ -122,12 +203,15 @@ namespace sibr
                                          pos = mat * pos;
                                      }
 
+
+
                                      // Define camera from OpenXR eye view position/orientation/fov
                                      Camera cam;
+                                     
                                      cam.rotate(q);
                                      cam.position(pos);
-                                     cam.zfar(camera.zfar());
-                                     cam.znear(camera.znear());
+                                     cam.zfar(0.2f);
+                                     cam.znear(250.f);
                                      cam.fovy(fov.w() - fov.z());
                                      cam.aspect((fov.y() - fov.x()) / (fov.w() - fov.z()));
 
@@ -138,6 +222,7 @@ namespace sibr
                                      // Note: setStereoCam() used in SteroAnaglyph canno be reused here,
                                      // because headset eye views have asymetric fov
                                      // We therefore use the perspective() method with principal point positioning instead
+                                     // 
                                      cam.principalPoint(Eigen::Vector2f(1.f, 1.f) - this->m_openxrHmd->getScreenCenter(eye));
                                      cam.perspective(cam.fovy(), (float)w / (float)h, cam.znear(), cam.zfar());
 
@@ -183,9 +268,67 @@ namespace sibr
                                      {
                                          optDest->unbind();
                                      }
+
+                                     if (PlayMode==2) {
+                                         glBindTexture(GL_TEXTURE_2D, texture);
+
+                                         // create the buffer to store the data
+                                         std::vector<GLubyte> pixels(w * h * 3);
+
+                                         // load pixel data from GPU to buffer
+                                         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+                                         // convert pixel data to OpenCV Mat Object
+                                         cv::Mat frame(h, w, CV_8UC3, pixels.data());
+
+                                         // OpenCV default using BGR format，thus convert it to RGB
+                                         cv::cvtColor(frame, frame, cv::COLOR_RGB2BGR);
+                                          cv::flip(frame, frame, 0); 
+                                         // write frame to different video according to the viewIndex(0 is left, 1 is right)
+                                         if (viewIndex == 0 && leftEyeVideoWriter.isOpened()) {
+                                             leftEyeVideoWriter.write(frame); // left eye
+                                         }
+                                         else if (viewIndex == 1 && rightEyeVideoWriter.isOpened()) {
+                                             rightEyeVideoWriter.write(frame); // right eye
+                                         }
+
+                                         glBindTexture(GL_TEXTURE_2D, 0);
+                                     }
+
                                  });
     }
 
+    void OpenXRRdrMode::StartReplay(const std::string& saveFilePath) {
+         
+            const int w = m_openxrHmd->getResolution().x();
+            const int h = m_openxrHmd->getResolution().y();
+            int fourcc = cv::VideoWriter::fourcc('M', 'J', 'P', 'G'); // using MJPG format
+            int fps = 30; // 30 frame per second
+            cv::Size frameSize(w, h); // video size
+            size_t pos = saveFilePath.find_last_of(".");
+
+            const std::string File= saveFilePath.substr(0, pos);
+            // video file name is File+left/right
+            leftEyeVideoWriter.open(File+"left.avi", fourcc, fps, frameSize);
+            rightEyeVideoWriter.open(File+"right.avi", fourcc, fps, frameSize);
+
+            if (true) {
+                if (!inFile.is_open()) {
+                    inFile.open(saveFilePath);
+                    // Skip the header line
+                    std::string header;
+                    std::getline(inFile, header);
+                }
+
+                if (inFile.is_open()) {
+                    PlayMode = 2;
+                    SIBR_LOG << "Start Replay---by using the trace!" << std::endl;
+                }
+                else {
+                    SIBR_LOG << "Do not find path file to replay!" << std::endl;
+                }
+            }
+    }
     void OpenXRRdrMode::onGui()
     {
         const std::string guiName = "OpenXR";
@@ -202,6 +345,37 @@ namespace sibr
         ImGui::SameLine();
         ImGui::RadioButton("Seated", &m_vrExperience, 1);
         ImGui::Checkbox("Y-Invert scene", &m_flipY);
+
+        // Add Save Tracks button
+        if (ImGui::Button("Save Traces")) {
+            PlayMode = 0;
+            
+            if (!outFile.is_open()) {
+                const std::string& out = "Output" + std::to_string(FrameIndex++)+".csv";
+                StartReplay(out);
+                outFile.open(out, std::ios::app);
+                // Write the CSV header if the file is being created
+                if (outFile.tellp() == 0) {
+                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW\n";
+                }
+            }
+            
+            SIBR_LOG << "Start Saving HMD Tracks to output file" << std::endl;
+        }
+
+        // Add Stop Saving button
+        ImGui::SameLine();  // Display on the same line
+        if (ImGui::Button("Stop Saving")) {
+            if (outFile.is_open()) {
+                outFile.close();
+            }
+            PlayMode = 1;
+            SIBR_LOG << "Saving Finished" << std::endl;
+            
+        }
+
+
+
         if (m_openxrHmd->isSessionRunning())
         {
             const auto report = m_openxrHmd->getRefreshReport();

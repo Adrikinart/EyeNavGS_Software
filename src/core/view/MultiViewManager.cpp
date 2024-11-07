@@ -87,9 +87,9 @@ namespace sibr
 		// Render all views.
 		for (auto & subview : _ibrSubViews) {
 			if (subview.second.view->active()) {
-
+				
 				renderSubView(subview.second);
-
+				
 				if (_enableGUI && _showSubViewsGui) {
 					subview.second.view->onGUI();
 					if (subview.second.handler) {
@@ -217,6 +217,7 @@ namespace sibr
 		if (!_onPause) {
 
 			const Viewport renderViewport(0.0, 0.0, (float)subview.rt->w(), (float)subview.rt->h());
+			
 			subview.render(_renderingMode, renderViewport);
 
 			// Offline video dumping, continued. We ignore additional rendering as those often are GUI overlays.
@@ -430,6 +431,7 @@ namespace sibr
 
 	void MultiViewBase::IBRSubView::render(const IRenderingMode::Ptr& rm, const Viewport& renderViewport) const  {
 		if (rm) {
+			
 			rm->render(*view, cam, renderViewport, rt.get());
 		}
 	}
@@ -479,7 +481,14 @@ namespace sibr
 
 		_fpsCounter.update(_enableGUI && _showGUI);
 	}
+	void MultiViewManager::StartRec(const std::string &path) {
+		_renderingMode->inpath = path;
+		_renderingMode->Recording = 1;
+	}
 
+	void MultiViewManager::EndRec() {
+		_renderingMode->recorded = 1;
+	}
 	void MultiViewManager::onGui(Window & win)
 	{
 		MultiViewBase::onGui(win);
@@ -616,6 +625,8 @@ namespace sibr
 				}
 
 				if (ImGui::MenuItem("Export Video")) {
+					
+					/*
 					std::string saveFile;
 					if (showFilePicker(saveFile, FilePickerMode::Save)) {
 						const std::string outputVideo = saveFile + ".mp4";
@@ -631,8 +642,10 @@ namespace sibr
 						} else {
 							SIBR_WRG << "No frames to export!! Check save frames in camera options for the view you want to render and play the path and re-export!" << std::endl;
 						}
-					}
+					}*/
 				}
+				
+				
 
 				ImGui::EndMenu();
 			}

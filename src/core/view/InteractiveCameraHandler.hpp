@@ -27,11 +27,13 @@
 #include "core/graphics/Viewport.hpp"
 #include "core/graphics/Mesh.hpp"
 #include "ICameraHandler.hpp"
+#include "core/view/MultiViewManager.hpp"
 
 namespace sibr {
 	class Mesh;
 	class Input;
 	class Raycaster;
+	
 
 	/**
 		The InteractiveCameraHandler gathers various types of camera interactions and
@@ -158,6 +160,7 @@ namespace sibr {
 		*/
 		void setFPSCameraSpeed(const float speed);
 
+
 		/// ICameraHandler interface.
 		/** Update function, call at every tick.
 		\param input the input object for the current view.
@@ -173,6 +176,8 @@ namespace sibr {
 		\param viewport the window viewport
 		*/
 		virtual void onRender(const sibr::Viewport & viewport) override;
+
+		void LoadPath(const std::string& path);
 
 		/** Show the GUI. 
 		\param suffix additional GUI name suffix to avoid collisions when having multiple handlers. 

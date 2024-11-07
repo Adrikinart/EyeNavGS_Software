@@ -79,6 +79,7 @@ namespace sibr
 
 	public:
 
+
 		/** Populate arguments list, should be called once at launch.
 		 * \param argc argument count
 		 * \param argv argument list

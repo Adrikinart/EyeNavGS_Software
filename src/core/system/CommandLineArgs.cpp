@@ -45,6 +45,7 @@ namespace sibr
 		std::string current_arg;
 		for (int i = 1; i < argc; ++i) {
 			std::string arg = std::string(argv[i]);
+
 			bool new_arg = false;
 			for (const auto & prefix : acceptable_prefixes) {
 				if (arg.substr(0, prefix.size()) == prefix) {
@@ -56,6 +57,7 @@ namespace sibr
 			if (current_arg.empty()) {
 				continue;
 			}
+
 			if (new_arg) {
 				if (global.args.count(current_arg) > 0) {
 					SIBR_WRG << "Collision for argument : " << arg << std::endl;

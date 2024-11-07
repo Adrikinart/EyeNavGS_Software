@@ -17,6 +17,7 @@
 #include "core/raycaster/Raycaster.hpp"
 #include "core/view/UIShortcuts.hpp"
 #include "core/graphics/GUI.hpp"
+#include <core/view/MultiViewManager.hpp>
 
 # define IBRVIEW_SMOOTHCAM_POWER	0.1f
 # define IBRVIEW_USESMOOTHCAM		true
@@ -345,6 +346,7 @@ namespace sibr {
 		_fpsCamera.setSpeed(speed);
 	}
 
+
 	void InteractiveCameraHandler::update(const sibr::Input & input, float deltaTime, const sibr::Viewport & viewport) {
 		if (!viewport.isEmpty()) {
 			_viewport = viewport;
@@ -517,6 +519,29 @@ namespace sibr {
 			_trackball.onRender(viewport);
 		}
 	}
+	void InteractiveCameraHandler::LoadPath(const std::string& path) {
+
+		if (!path.empty()) {
+			SIBR_LOG << "Loading" << std::endl;
+			_cameraRecorder.reset();
+			if (boost::filesystem::extension(path) == ".out")
+				_cameraRecorder.loadBundle(path, _currentCamera.w(), _currentCamera.h());
+			else if (boost::filesystem::extension(path) == ".lookat")
+				_cameraRecorder.loadLookat(path, _currentCamera.w(), _currentCamera.h());
+			else if (boost::filesystem::extension(path) == ".txt")
+				_cameraRecorder.loadColmap(path, _currentCamera.w(), _currentCamera.h());
+			else if (boost::filesystem::extension(path) == ".csv")
+				_cameraRecorder.loadCsv(path, _currentCamera.w(), _currentCamera.h());
+			else
+				_cameraRecorder.load(path);
+			// dont play back until explicitly requested 
+			//							_cameraRecorder.playback();
+
+			_cameraRecorder.playback();
+		}
+
+
+	}
 
 	void InteractiveCameraHandler::onGUI(const std::string& suffix) {
 
@@ -627,6 +652,7 @@ namespace sibr {
 
 				if (ImGui::Button("Play")) {
 					_cameraRecorder.playback();
+
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Play (No Interp)")) {
@@ -658,6 +684,8 @@ namespace sibr {
 								_cameraRecorder.loadLookat(selectedFile, _currentCamera.w(), _currentCamera.h());
 							else if (boost::filesystem::extension(selectedFile) == ".txt")
 								_cameraRecorder.loadColmap(selectedFile, _currentCamera.w(), _currentCamera.h());
+							else if(boost::filesystem::extension(selectedFile)==".csv")
+								_cameraRecorder.loadCsv(selectedFile,_currentCamera.w(),_currentCamera.h());
 							else
 								_cameraRecorder.load(selectedFile);
 // dont play back until explicitly requested 
@@ -677,6 +705,7 @@ namespace sibr {
 							_cameraRecorder.saveAsBundle(selectedFile + ".out", _currentCamera.h());
 							_cameraRecorder.saveAsColmap(selectedFile, _currentCamera.h(), _currentCamera.w());
 							_cameraRecorder.saveAsLookAt(selectedFile + ".lookat");
+							_cameraRecorder.saveCameraDataToCSV(selectedFile + ".csv");
 							if (_fribrExport) {
 								const int height = int(std::floor(1920.0f / _currentCamera.aspect()));
 								_cameraRecorder.saveAsFRIBRBundle(selectedFile + "_fribr/", 1920, height);
@@ -711,6 +740,7 @@ namespace sibr {
 					_cameraRecorder.stopSaving();
 					_cameraRecorder.savingVideo(_saveFrameVideo);
 				}
+
 				
 				//ImGui::SameLine();
 				//ImGui::Checkbox("Fribr export", &_fribrExport);

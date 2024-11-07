@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2020, Inria
  * GRAPHDECO research group, https://team.inria.fr/graphdeco
  * All rights reserved.
@@ -62,6 +62,8 @@ namespace sibr
 				cam.setSavePath(_savingPath + "/" + ssZeroPad.str() + ".png");
 				//std::cout << "Saving frame as: " << cam.savePath() << std::endl;
 			}
+
+
 			if (_savingVideo) {
 				cam.setDebugVideo(true);
 			}
@@ -69,6 +71,7 @@ namespace sibr
 			{
 				stop();
 				SIBR_LOG << "[CameraRecorder] - Playback Finished" << std::endl;
+				sibr::Input::global().key().press(sibr::Key::Escape);
 			}
 		} 
 		else {
@@ -210,6 +213,91 @@ namespace sibr
 			_cameras.push_back(*cam);
 		}
 
+	}
+
+	void CameraRecorder::loadCsv(const std::string& filePath, int w, int h)
+	{
+		SIBR_LOG << "Loading csv path." << std::endl;
+		std::ifstream csvFile(filePath);
+
+		std::string line;
+		int numImages = -1;
+		
+		if (csvFile.is_open()) {
+			while (std::getline(csvFile, line)) {
+				++numImages;  
+			}
+
+		}
+		else {
+			SIBR_LOG << "Cannot open csv file" << std::endl;
+		}
+		csvFile.clear();  
+		csvFile.seekg(0); 
+
+
+		std::string header;
+		std::getline(csvFile, header);
+		sibr::Vector4f fov;
+		sibr::Vector3f pos;
+		sibr::Quaternionf quat;
+
+		std::vector<InputCamera::Ptr> cameras(numImages/2);
+		
+		for (int i = 0, tep = 1; i < numImages; i+=1){
+			std::getline(csvFile, line);
+			
+			std::istringstream lineStream(line);
+			std::string token;
+
+			std::getline(lineStream, token, ',');
+
+			// Read FOV
+			for (int j = 0; j < 4; ++j) {
+				std::getline(lineStream, token, ',');
+				fov[j] = std::stof(token);
+			}
+
+			// Read Position
+			for (int j = 0; j < 3; ++j) {
+				std::getline(lineStream, token, ',');
+				pos[j] = std::stof(token);
+			}
+
+			// Read Quaternion
+			for (int j = 0; j < 4; ++j) {
+				std::getline(lineStream, token, ',');
+				quat.coeffs()(j) = std::stof(token);
+			}
+
+			if (false)
+			{//using OpenXR traces, set it true
+				Eigen::Matrix3f mat;
+				mat << 1.0f, 0.0f, 0.0f,
+					0.0f, -1.0f, 0.0f,
+					0.0f, 0.0f, -1.0f;
+				Eigen::Matrix3f rot = mat * quat.matrix();
+				quat = Eigen::Quaternionf(rot);
+				pos = mat * pos;
+			}
+
+
+
+			cameras[i / 2] = InputCamera::Ptr(new InputCamera(i / 2, w, h, pos, quat, true));
+			
+			cameras[i / 2]->fovy(fov[3]-fov[2]);
+			//cameras[i / 2]->aspect((fov.y() - fov.x()) / (fov.w() - fov.z())); 
+			cameras[i / 2]->znear(0.2f); 
+			cameras[i / 2]->zfar(250.f);
+			//cameras[i / 2]->perspective(cameras[i / 2]->fovy(), (float)w / (float)h, cameras[i / 2]->znear(), cameras[i / 2]->zfar());
+
+		}
+
+		for (const InputCamera::Ptr cam : cameras)
+		{
+			_cameras.push_back(*cam);
+		}
+		SIBR_LOG << "Load finished." << std::endl;
 	}
 
 	void CameraRecorder::loadColmap(const std::string &filePath, int w, int h)
@@ -400,6 +488,53 @@ namespace sibr
 			SIBR_LOG << "[CameraRecorder] - Saved " << _cameras.size() << " cameras to " << dirPath << "." << std::endl;
 		}
 	}
+	
+
+
+	void CameraRecorder::saveCameraDataToCSV(const std::string& filename) const {
+		std::ofstream outFile(filename);
+
+		if (!outFile.is_open()) {
+			std::cerr << "Failed to open file: " << filename << std::endl;
+			return;
+		}
+
+		// write csv header
+		outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW\n";
+
+		// Traverse all cameras and write data
+		for (size_t i = 0; i < _cameras.size(); ++i) {
+			const sibr::Camera& cam = _cameras[i];
+
+			// get position and rotation(quaternion)
+			sibr::Vector3f position = cam.position();
+			sibr::Quaternionf rotation = cam.rotation(); // 假设返回 Quaternion
+
+			// write data
+			outFile << 0 << "," // View index
+				<< -0.942478 << "," << 0.698132 << "," << -0.959931 << "," << 0.767945 << "," << position.x() << ","
+				<< position.y() << ","
+				<< position.z() << ","
+				<< rotation.x() << ","
+				<< rotation.y() << ","
+				<< rotation.z() << ","
+				<< rotation.w() << "\n";
+
+			// write data again(match the headset mode trace)
+			outFile << 1 << "," // View index
+				<< -0.942478 << "," << 0.698132 << "," << -0.959931 << "," << 0.767945 << "," 
+				<< position.x() << ","
+				<< position.y() << ","
+				<< position.z() << ","
+				<< rotation.x() << ","
+				<< rotation.y() << ","
+				<< rotation.z() << ","
+				<< rotation.w() << "\n";
+		}
+
+		outFile.close();
+		std::cout << "Camera data saved to " << filename << std::endl;
+	}
 
 	void CameraRecorder::saveAsLookAt(const std::string & filePath) const
 	{
@@ -511,5 +646,9 @@ namespace sibr
 		std::cout << std::endl;
 		std::cout << "Done saving image. " << std::endl;
 	}
+
+
+
+	
 
 } // namespace sibr

@@ -92,6 +92,9 @@ namespace sibr
 		 * \param w image width
 		 * \param h image height
 		 */
+
+		InputCamera(int id, int w, int h, sibr::Vector3f p, sibr::Quaternionf q, bool active);
+
 		InputCamera(const Camera& c, int w, int h);
 
 		/** Copy constructor. */

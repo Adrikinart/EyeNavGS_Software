@@ -24,7 +24,8 @@
 #include <boost/filesystem.hpp>
 #include <regex>
 #include <imgui/imgui_internal.h>
-
+#define Width 1200
+#define Height 789
 namespace fs = boost::filesystem;
 
 std::string findLargestNumberedSubdirectory(const std::string& directoryPath) {
@@ -102,14 +103,20 @@ int main(int ac, char** av)
 	CommandLineArgs::parseMainArgs(ac, av);
 	GaussianAppArgs myArgs;
 	myArgs.displayHelpIfRequired();
+
+
 	
 	if(!myArgs.modelPath.isInit() && myArgs.modelPathShort.isInit())
 		myArgs.modelPath = myArgs.modelPathShort.get();
 	if(!myArgs.dataset_path.isInit() && myArgs.pathShort.isInit())
 		myArgs.dataset_path = myArgs.pathShort.get();
+	
+
+	
+
 
 	int device = myArgs.device;
-
+	
 	// rendering size
 	uint rendering_width = myArgs.rendering_size.get()[0];
 	uint rendering_height = myArgs.rendering_size.get()[1];
@@ -190,8 +197,8 @@ int main(int ac, char** av)
 	const uint flags = SIBR_GPU_LINEAR_SAMPLING | SIBR_FLIP_TEXTURE;
 
 	// Fix rendering aspect ratio if user provided rendering size
-	uint scene_width = scene->cameras()->inputCameras()[0]->w();
-	uint scene_height = scene->cameras()->inputCameras()[0]->h();
+	uint scene_width = rendering_width;//scene->cameras()->inputCameras()[0]->w();
+	uint scene_height = rendering_height;//scene->cameras()->inputCameras()[0]->h();
 	float scene_aspect_ratio = scene_width * 1.0f / scene_height;
 	float rendering_aspect_ratio = rendering_width * 1.0f / rendering_height;
 
@@ -221,12 +228,13 @@ int main(int ac, char** av)
 	raycaster->addMesh(scene->proxies()->proxy());
 
 	// Camera handler for main view.
-	sibr::InteractiveCameraHandler::Ptr generalCamera(new InteractiveCameraHandler());
+	auto camera = new InteractiveCameraHandler();
+	sibr::InteractiveCameraHandler::Ptr generalCamera(camera);
 	generalCamera->setup(scene->cameras()->inputCameras(), Viewport(0, 0, (float)usedResolution.x(), (float)usedResolution.y()), nullptr);
-
+	
 	// Add views to mvm.
 	MultiViewManager        multiViewManager(window, false);
-
+	
 	switch (myArgs.rendering_mode) {
 		case 1:
 			multiViewManager.renderingMode(IRenderingMode::Ptr(new StereoAnaglyphRdrMode()));
@@ -234,8 +242,24 @@ int main(int ac, char** av)
 		case 2:
 			multiViewManager.renderingMode(IRenderingMode::Ptr(new OpenXRRdrMode(window)));
 			break;
+		case 3: {//record video in headset
+			if (!myArgs.Inpath.isInit())
+				myArgs.Inpath = myArgs.Inpath.get();
+			auto mode = new OpenXRRdrMode(window);
+			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
+			mode->StartReplay(myArgs.Inpath.get());
+			break;
+		}
+		case 4: {//record video in desktop
+			if (!myArgs.Inpath.isInit())
+				myArgs.Inpath = myArgs.Inpath.get();
+			camera->LoadPath(myArgs.Inpath.get());
+			multiViewManager.StartRec(myArgs.Inpath.get());
+			break;
+		}
 		default:
 			break;
+			
 	}
 	
 	multiViewManager.addIBRSubView("Point view", gaussianView, usedResolution, ImGuiWindowFlags_ResizeFromAnySide | ImGuiWindowFlags_NoBringToFrontOnFocus);
@@ -262,13 +286,13 @@ int main(int ac, char** av)
 	{
 		sibr::Input::poll();
 		window.makeContextCurrent();
-		if (sibr::Input::global().key().isPressed(sibr::Key::Escape)) {
-			window.close();
-		}
+		
 
 		multiViewManager.onUpdate(sibr::Input::global());
 		multiViewManager.onRender(window);
-
+		if (sibr::Input::global().key().isPressed(sibr::Key::Escape)) {
+			window.close();
+		}
 		window.swapBuffer();
 		CHECK_GL_ERROR;
 	}

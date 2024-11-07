@@ -36,7 +36,9 @@ namespace sibr
 	public:
 		/// Destructor.
 		virtual ~IRenderingMode( void ) { }
-
+		int recorded = 0;
+		std::string inpath;
+		int Recording = 0;
 		/** Perform rendering of a view.
 		 *\param view the view to render
 		 *\param eye the current camera
@@ -84,6 +86,12 @@ namespace sibr
 		/// Constructor.
 		MonoRdrMode( void );
 
+		void Record(const sibr::Viewport& viewport, int width, int height);
+
+
+		//if is recording
+		cv::VideoWriter _outputVideo;
+		
 		/** Perform rendering of a view.
 		 *\param view the view to render
 		 *\param eye the current camera

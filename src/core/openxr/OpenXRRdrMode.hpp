@@ -12,11 +12,17 @@
 #include <core/openxr/Config.hpp>
 #include <core/openxr/OpenXRHMD.hpp>
 #include <core/openxr/SwapchainImageRenderTarget.hpp>
-
+#include <opencv2/opencv.hpp>
+#include <vector>
 #include <map>
 
 namespace sibr
 {
+    struct ViewData {
+        Eigen::Vector4f fov; // FOV: 4 float values
+        Eigen::Vector3f position; // Position: 3 float values
+        Eigen::Quaternionf quaternion; // Quaternion: 4 float values
+    };
 
     /** OpenXRRdrMode renders a stereoscopic view to an Headset-Mouted display OpenXR device.
     *   It also renders both views to a SIBR view.
@@ -26,8 +32,26 @@ namespace sibr
     {
     public:
         /// Constructor.
+        std::string OutputName;
+
         explicit OpenXRRdrMode(sibr::Window &window);
         ~OpenXRRdrMode();
+
+        sibr::Window* XRwindow;
+        cv::VideoWriter leftEyeVideoWriter;
+        cv::VideoWriter rightEyeVideoWriter;
+
+        //OutPut File
+        std::ofstream outFile;
+        //Input File
+        std::ifstream inFile;
+
+        //Frame Index
+        std::int16_t FrameIndex = 0;
+        
+        int PlayMode = 1; //0 is saving Tracks; 1 is Stop Saving(normal play); 2 is Input Replay
+
+        void loadViewData( ViewData& view);
 
         /** Perform rendering of a view.
          *\param view the view to render
@@ -49,8 +73,11 @@ namespace sibr
         /** \return the right eye RT. */
         virtual const std::unique_ptr<RenderTargetRGB> &rRT() { return _rightRT; }
 
+        void StartReplay(const std::string& saveFilePath);
+
         /** GUI for configuring OpenXR rendering */
         void onGui();
+        
 
     private:
         std::unique_ptr<OpenXRHMD> m_openxrHmd;                  ///< OpenXR interface

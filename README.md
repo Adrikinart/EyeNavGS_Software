@@ -1,3 +1,48 @@
+
+
+# SIBR Gaussian VR Viewer
+- If you want to read the original README.md file, please click [SIBR Core](#sibr-core). Or if you want to use VR viewer, please read the following instructions.
+
+## How to set up
+
+First of all, checkout the repository
+  ```sh
+  git clone https://github.com/symmru/SIBR_Gaussian_VRV.git
+  ```
+1. Follow the [Install requirements](#install-requirements) and make sure they are in the PATH
+2. Open Cmake-gui, select the repo root as a source directory, `build/` as the build directory. Configure, select the Visual Studio C++ Win64 compiler
+3. Select the projects you want to generate among the BUILD elements in the list (you can group Cmake flags by categories to access those faster). Generate
+
+## How to compile
+1. Open the generated Visual Studio solution (`build/sibr_projects.sln`), find `core/sibr_openxr` in Solution Explorer, change its properties to ensure the C++ standard is set to C++20 or higher
+2. Build the `ALL_BUILD` target and then the `INSTALL` target 
+3. The compiled executables will be put in `install/bin` and the `SIBR_gaussianViewer_app_d.exe` can be used to run this system (make sure `install/bin` is in your PATH)
+4. Then you can run it by the following steps
+
+## How to save traces
+
+1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2`
+
+(Then you can see a sub-window on the desktop as shown below)
+![openxr gaussian viewer](./docs/img/Saving_trace_button.png)
+
+2. After pressing "Save Traces" your movement trajectory and field of view will be recorded until you click "Stop Saving". Then an output file named `output[number].csv` will be generated in the current directory. (There will be more .csv files if you repeat this process)
+
+## How to replay
+1. Using Headset mode(driven by SteamVR) to replay according to the trace. Run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> -in <trace_file_path> --rendering-mode 3`(Default size 2064x2272 for each eye)
+2. Using Desktop mode to replay according to the trace. Run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> -in <trace_file_path> --rendering-mode 4 --rendering-size <width> <height>`(If there's no rendering-size, the default size is 1200x789)
+3. Trace Format: .csv file (viewIndex, FOV1, FOV2, FOV3, FOV4, PositionX, PositionY, PositionZ, QuaternionX, QuternionY, QuaternionZ, QuaternionW)
+![openxr gaussian viewer](./docs/img/trace_example.jpg)
+* ViewIndex: Index used to identify left eye or right eye, 0 is left, 1 is right.  
+* FOV1: The left field of view angle.  
+* FOV2: The right field of view angle.  
+* FOV3: The top field of view angle.  
+* FOV4: The bottom field of view angle.  
+* PositionX,Y,Z: The camera's position coordinates in 3D space, defining where the camera is located.  
+* QuaternionX,Y,Z,W: Defines the camera's rotation as a quaternion, which represents 3D rotations without the risk of gimbal lock.
+
+---
+
 # SIBR Core
 
 **SIBR** is a System for Image-Based Rendering.  
@@ -179,26 +224,3 @@ _Note: `OpenXRRdrMode` does not (yet) support actions (aka controller buttons). 
 
 Tested with an HTC Vive Pro with `beta - SteamVR Beta Update` on Ubuntu distribution and Meta Quest 2 with `Oculus` on Windows 11.
 
----
-**How to save traces and replay**
-- If you want to use this function, please clone this repository and follow the process above to set up.
-
-  ```sh
-  ## through HTTPS
-  git clone https://github.com/symmru/SIBR_Gaussian_VRViewer.git
-  ```
-
-![openxr gaussian viewer](./docs/img/Saving_trace_button.png)
-1. If use Desktop Mode, run `gaussianViewer -m <dataset_path> --rendering-size <width> <height>`; if use OpenXR mode, run `gaussianViewer -m <dataset_path> --rendering-mode 2 --rendering-size <width> <height>`
-2. After pressing "Save Traces" your movement trajectory and field of view will be recorded until you click "Stop Saving". Then an output file named output[number].csv will be generated in the current directory.
-3. Using Headset mode(driven by SteamVR) to replay according to the trace. Run `gaussianViewer -m <dataset_path> -in <trace_file_path> --rendering-mode 3`(Default size 2064x2272 for each eye)
-4. Using Desktop mode to replay according to the trace. Run `gaussianViewer -m <dataset_path> -in <trace_file_path> --rendering-mode 4 --rendering-size <width> <height>`
-5. Trace Format: .csv file (viewIndex, FOV1, FOV2, FOV3, FOV4, PositionX, PositionY, PositionZ, QuaternionX, QuternionY, QuaternionZ, QuaternionW)
-![openxr gaussian viewer](./docs/img/trace_example.jpg)
-* ViewIndex: Index used to identify left eye or right eye, 0 is left, 1 is right.  
-* FOV1: The left field of view angle.  
-* FOV2: The right field of view angle.  
-* FOV3: The top field of view angle.  
-* FOV4: The bottom field of view angle.  
-* PositionX,Y,Z: The camera's position coordinates in 3D space, defining where the camera is located.  
-* QuaternionX,Y,Z,W: Defines the camera's rotation as a quaternion, which represents 3D rotations without the risk of gimbal lock.

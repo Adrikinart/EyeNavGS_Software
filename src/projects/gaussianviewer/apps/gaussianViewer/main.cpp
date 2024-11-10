@@ -24,8 +24,6 @@
 #include <boost/filesystem.hpp>
 #include <regex>
 #include <imgui/imgui_internal.h>
-#define Width 1200
-#define Height 789
 namespace fs = boost::filesystem;
 
 std::string findLargestNumberedSubdirectory(const std::string& directoryPath) {
@@ -112,8 +110,6 @@ int main(int ac, char** av)
 		myArgs.dataset_path = myArgs.pathShort.get();
 	
 
-	
-
 
 	int device = myArgs.device;
 	
@@ -121,6 +117,7 @@ int main(int ac, char** av)
 	uint rendering_width = myArgs.rendering_size.get()[0];
 	uint rendering_height = myArgs.rendering_size.get()[1];
 	
+
 	// window size
 	uint win_width = rendering_width; // myArgs.win_width;
 	uint win_height = rendering_height; // myArgs.win_height;

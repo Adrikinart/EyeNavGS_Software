@@ -386,7 +386,7 @@ namespace sibr
 	/// \ingroup sibr_system
 	struct SIBR_SYSTEM_EXPORT RenderingArgs {
 		Arg<std::string> scene_metadata_filename = { "scene", "scene_metadata.txt", "scene metadata file" };
-		Arg<Vector2i> rendering_size = { "rendering-size", { 0, 0 }, "size at which rendering is performed" };
+		Arg<Vector2i> rendering_size = { "rendering-size", { 1200, 789 }, "size at which rendering is performed" };
 		Arg<int> texture_width = { "texture-width", 0 , "size of the input data in memory"};
 		Arg<float> texture_ratio = { "texture-ratio", 1.0f };
 		Arg<int> rendering_mode = { "rendering-mode", RENDERMODE_MONO, "select mono (0), stereo anaglyph (1) or openxr (2) rendering mode" };

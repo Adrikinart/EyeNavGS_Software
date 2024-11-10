@@ -302,15 +302,15 @@ namespace sibr
          
             const int w = m_openxrHmd->getResolution().x();
             const int h = m_openxrHmd->getResolution().y();
-            int fourcc = cv::VideoWriter::fourcc('M', 'J', 'P', 'G'); // using MJPG format
+            int fourcc = cv::VideoWriter::fourcc('H', '2', '6', '4'); // using MJPG format
             int fps = 30; // 30 frame per second
             cv::Size frameSize(w, h); // video size
             size_t pos = saveFilePath.find_last_of(".");
 
             const std::string File= saveFilePath.substr(0, pos);
             // video file name is File+left/right
-            leftEyeVideoWriter.open(File+"left.avi", fourcc, fps, frameSize);
-            rightEyeVideoWriter.open(File+"right.avi", fourcc, fps, frameSize);
+            leftEyeVideoWriter.open(File+"left.mp4", fourcc, fps, frameSize);
+            rightEyeVideoWriter.open(File+"right.mp4", fourcc, fps, frameSize);
 
             if (true) {
                 if (!inFile.is_open()) {

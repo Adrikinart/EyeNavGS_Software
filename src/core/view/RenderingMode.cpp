@@ -29,12 +29,12 @@ namespace sibr
 	}
 	void MonoRdrMode::Record(const sibr::Viewport& viewport,int width,int height) {
 		Recording++;
-		int codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G'); 
+		int codec = cv::VideoWriter::fourcc('H', '2', '6', '4'); 
 
 		size_t pos = inpath.find_last_of(".");
 
 		const std::string File = inpath.substr(0, pos);
-		const std::string& path = File+".avi";
+		const std::string& path = File+".mp4";
 		_outputVideo.open(path, codec, 30, cv::Size(width, height), true);
 		if (!_outputVideo.isOpened()) {
 			std::cerr << "Error: Could not open the video file for writing." << std::endl;

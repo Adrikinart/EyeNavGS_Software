@@ -27,12 +27,12 @@ First of all, checkout the repository
   #For example
   SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train --rendering-mode
   ```
-(Then you can see a sub-window on the desktop as shown below; left for Headset Mode, right for Desktop Mode)
+(Then you can see a sub-window on the desktop as shown below)
 
 ![openxr gaussian viewer](./docs/img/Saving_trace_button.png) ![openxr gaussian viewer](./docs/img/Saving_trace_Desktop.png)
 
-2. Headset Mode:(OpenXR) After pressing "Save Traces" your movement trajectory and field of view will be recorded until you click "Stop Saving". Then an output file named `output[number].csv` will be generated in the current directory. (There will be more .csv files if you repeat this process)
-3. Desktop Mode:(Camera Point view) After pressing "Record" your movement trajectory and field of view will be recorded until you click "Stop". Then by pressing "Save path" you can select a folder to save the path files including .csv file. 
+2. For Headset Mode:(OpenXR) After pressing "Save Traces" your movement trajectory and field of view will be recorded until you click "Stop Saving". Then an output file named `output[number].csv` will be generated in the current directory. (There will be more .csv files if you repeat this process)
+3. For Desktop Mode:(Camera Point view) After pressing "Record" your movement trajectory and field of view will be recorded until you click "Stop". Then by pressing "Save path" you can select a folder to save the path files including .csv file. 
 
 ## How to replay
 1. Using Headset mode(driven by SteamVR) to replay according to the trace. Run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> -in <trace_file_path> --rendering-mode 3`(Default size 2064x2272 for each eye)

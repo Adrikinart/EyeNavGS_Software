@@ -10,8 +10,9 @@ First of all, checkout the repository
   git clone https://github.com/symmru/SIBR_Gaussian_VRV.git
   ```
 1. Follow the [Install requirements](#install-requirements) and make sure they are in the PATH
-2. Open Cmake-gui, select the repo root as a source directory, `build/` as the build directory. Configure, select the Visual Studio C++ Win64 compiler
-3. Select the projects you want to generate among the BUILD elements in the list (you can group Cmake flags by categories to access those faster). Generate
+2. Download and unzip the dataset from "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip"
+3. Open Cmake-gui, select the repo root as a source directory, `build/` as the build directory. Configure, select the Visual Studio C++ Win64 compiler
+4. Select the projects you want to generate among the BUILD elements in the list (you can group Cmake flags by categories to access those faster). Generate
 
 ## How to compile
 1. Open the generated Visual Studio solution (`build/sibr_projects.sln`), find `core/sibr_openxr` in Solution Explorer, change its properties to ensure the C++ standard is set to C++20 or higher
@@ -21,16 +22,25 @@ First of all, checkout the repository
 
 ## How to save traces
 
-1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2`
+1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2` 
+  ```sh
+  #For example
+  SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train --rendering-mode
+  ```
+(Then you can see a sub-window on the desktop as shown below; left for Headset Mode, right for Desktop Mode)
 
-(Then you can see a sub-window on the desktop as shown below)
-![openxr gaussian viewer](./docs/img/Saving_trace_button.png)
+![openxr gaussian viewer](./docs/img/Saving_trace_button.png) ![openxr gaussian viewer](./docs/img/Saving_trace_Desktop.png)
 
-2. After pressing "Save Traces" your movement trajectory and field of view will be recorded until you click "Stop Saving". Then an output file named `output[number].csv` will be generated in the current directory. (There will be more .csv files if you repeat this process)
+2. Headset Mode:(OpenXR) After pressing "Save Traces" your movement trajectory and field of view will be recorded until you click "Stop Saving". Then an output file named `output[number].csv` will be generated in the current directory. (There will be more .csv files if you repeat this process)
+3. Desktop Mode:(Camera Point view) After pressing "Record" your movement trajectory and field of view will be recorded until you click "Stop". Then by pressing "Save path" you can select a folder to save the path files including .csv file. 
 
 ## How to replay
 1. Using Headset mode(driven by SteamVR) to replay according to the trace. Run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> -in <trace_file_path> --rendering-mode 3`(Default size 2064x2272 for each eye)
 2. Using Desktop mode to replay according to the trace. Run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> -in <trace_file_path> --rendering-mode 4 --rendering-size <width> <height>`(If there's no rendering-size, the default size is 1200x789)
+ ```sh
+  #For example
+  SIBR_gaussianViewer_app_d.exe -m <C:\User\SIBR\models\train -in C:\User\SIBR\Test\output0.csv --rendering-mode 4 --rendering-size 1200 900
+  ```
 3. Trace Format: .csv file (viewIndex, FOV1, FOV2, FOV3, FOV4, PositionX, PositionY, PositionZ, QuaternionX, QuternionY, QuaternionZ, QuaternionW)
 ![openxr gaussian viewer](./docs/img/trace_example.jpg)
 * ViewIndex: Index used to identify left eye or right eye, 0 is left, 1 is right.  

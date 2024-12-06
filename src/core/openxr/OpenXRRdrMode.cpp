@@ -173,13 +173,17 @@ namespace sibr
                                      ViewData viewData;
                                      if (PlayMode == 2) {
                                          loadViewData(viewData);
-                                         
                                      }
                                      //playMode == 2, Replay; playMode == 0 or 1, HMD controls;
                                      auto fov = PlayMode == 2 ? viewData.fov : this->m_openxrHmd->getFieldOfView(eye);
                                      auto q = PlayMode == 2 ? viewData.quaternion : this->m_openxrHmd->getPoseQuaternion(eye);
                                      auto pos = PlayMode == 2 ? viewData.position : this->m_openxrHmd->getPosePosition(eye);
 
+                                     Eigen::Matrix3f temp;
+                                     temp = Rotation * q.matrix();
+                                     q = Eigen::Quaternionf(temp);
+
+                                     pos += translation;
                                      // OpenXR eye position is in world coordinates system (+x: right, +y: up; +z: backward)
                                      // 3DGS reference scenes have the following coordinate system : +x: right, +y: down, +z: forward
                                      // Let's rotate the camera to have the right-side up scene

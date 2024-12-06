@@ -34,7 +34,7 @@ namespace sibr
         /// Constructor.
         std::string OutputName;
 
-        explicit OpenXRRdrMode(sibr::Window &window);
+        explicit OpenXRRdrMode(sibr::Window& window);
         ~OpenXRRdrMode();
 
         sibr::Window* XRwindow;
@@ -48,10 +48,10 @@ namespace sibr
 
         //Frame Index
         std::int16_t FrameIndex = 0;
-        
+
         int PlayMode = 1; //0 is saving Tracks; 1 is Stop Saving(normal play); 2 is Input Replay
 
-        void loadViewData( ViewData& view);
+        void loadViewData(ViewData& view);
 
         /** Perform rendering of a view.
          *\param view the view to render
@@ -59,26 +59,32 @@ namespace sibr
          *\param viewport the current viewport
          *\param optDest an optional destination RT
          */
-        void render(ViewBase &view, const sibr::Camera &eye, const sibr::Viewport &viewport, IRenderTarget *optDest = nullptr);
+        void render(ViewBase& view, const sibr::Camera& eye, const sibr::Viewport& viewport, IRenderTarget* optDest = nullptr);
 
         /** Get the current rendered image as a CPU image
          *\param current_img will contain the content of the RT */
-        void destRT2img(sibr::ImageRGB &current_img)
+        void destRT2img(sibr::ImageRGB& current_img)
         {
             return;
         }
 
         /** \return the left eye RT. */
-        virtual const std::unique_ptr<RenderTargetRGB> &lRT() { return _leftRT; }
+        virtual const std::unique_ptr<RenderTargetRGB>& lRT() { return _leftRT; }
         /** \return the right eye RT. */
-        virtual const std::unique_ptr<RenderTargetRGB> &rRT() { return _rightRT; }
+        virtual const std::unique_ptr<RenderTargetRGB>& rRT() { return _rightRT; }
 
         void StartReplay(const std::string& saveFilePath);
 
         /** GUI for configuring OpenXR rendering */
         void onGui();
-        
 
+         Eigen::Vector3f translation;
+         Eigen::Matrix3f Rotation;
+
+  /*  Eigen::Matrix3f Rotation= (Eigen::Matrix3f()<<
+            1.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 1.0f).finished();*/
     private:
         std::unique_ptr<OpenXRHMD> m_openxrHmd;                  ///< OpenXR interface
         sibr::GLShader m_quadShader;                             ///< Shader for drawing left/right eye in desktop window

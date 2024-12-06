@@ -24,6 +24,8 @@
 #include <boost/filesystem.hpp>
 #include <regex>
 #include <imgui/imgui_internal.h>
+#include <cmath>
+#define M_PI 3.1415926535897932384626
 namespace fs = boost::filesystem;
 
 std::string findLargestNumberedSubdirectory(const std::string& directoryPath) {
@@ -85,7 +87,33 @@ static void User_ReadLine(ImGuiContext*, ImGuiSettingsHandler* handler, void*, c
 		}
 	*((bool*)handler->UserData) = false;
 }
+Eigen::Matrix3f eulerToRotationMatrix(float x_deg, float y_deg, float z_deg) {
+	// Convert degrees to radians
+	float x_rad = x_deg * M_PI / 180.0f;
+	float y_rad = y_deg * M_PI / 180.0f;
+	float z_rad = z_deg * M_PI / 180.0f;
 
+	// Rotation matrices for X, Y, Z axes
+	Eigen::Matrix3f Rx;
+	Rx << 1, 0, 0,
+		0, std::cos(x_rad), -std::sin(x_rad),
+		0, std::sin(x_rad), std::cos(x_rad);
+
+	Eigen::Matrix3f Ry;
+	Ry << std::cos(y_rad), 0, std::sin(y_rad),
+		0, 1, 0,
+		-std::sin(y_rad), 0, std::cos(y_rad);
+
+	Eigen::Matrix3f Rz;
+	Rz << std::cos(z_rad), -std::sin(z_rad), 0,
+		std::sin(z_rad), std::cos(z_rad), 0,
+		0, 0, 1;
+
+	// Combined rotation matrix: R = Rz * Ry * Rx (Z first, then Y, then X)
+	Eigen::Matrix3f R = Rz * Ry * Rx;
+
+	return R;
+}
 static void User_WriteAll(ImGuiContext* imgui_ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
 {
 	// Write a buffer
@@ -117,6 +145,11 @@ int main(int ac, char** av)
 	uint rendering_width = myArgs.rendering_size.get()[0];
 	uint rendering_height = myArgs.rendering_size.get()[1];
 	
+
+	float x_deg = myArgs.initial_rotation.get()[0]; // Rotation about X-axis
+	float y_deg = myArgs.initial_rotation.get()[1]; // Rotation about Y-axis
+	float z_deg = myArgs.initial_rotation.get()[2];  // Rotation about Z-axis
+
 
 	// window size
 	uint win_width = rendering_width; // myArgs.win_width;
@@ -231,14 +264,21 @@ int main(int ac, char** av)
 	
 	// Add views to mvm.
 	MultiViewManager        multiViewManager(window, false);
-	
+		
 	switch (myArgs.rendering_mode) {
 		case 1:
 			multiViewManager.renderingMode(IRenderingMode::Ptr(new StereoAnaglyphRdrMode()));
 			break;
-		case 2:
-			multiViewManager.renderingMode(IRenderingMode::Ptr(new OpenXRRdrMode(window)));
+		case 2: {
+			auto mode = new OpenXRRdrMode(window);
+			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
+			mode->translation.x() = myArgs.initial_position.get()[0];
+			mode->translation.y() = myArgs.initial_position.get()[1];
+			mode->translation.z() = myArgs.initial_position.get()[2];
+			mode->Rotation = eulerToRotationMatrix(x_deg, y_deg, z_deg);
+			SIBR_LOG << mode->translation << "This is initial position";
 			break;
+		}
 		case 3: {//record video in headset
 			if (!myArgs.Inpath.isInit())
 				myArgs.Inpath = myArgs.Inpath.get();

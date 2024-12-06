@@ -49,6 +49,9 @@ namespace sibr
 			bool new_arg = false;
 			for (const auto & prefix : acceptable_prefixes) {
 				if (arg.substr(0, prefix.size()) == prefix) {
+					if (prefix == "-" && arg.size() > prefix.size() && std::isdigit(arg[prefix.size()])) {
+						break; 
+					}
 					current_arg = arg.substr(prefix.size());
 					new_arg = true;		
 					break;

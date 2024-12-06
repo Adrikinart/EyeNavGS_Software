@@ -21,7 +21,27 @@ First of all, checkout the repository
 4. Then you can run it by the following steps
 
 ## How to save traces
+| Dataset_Name | Initial Position (x y z) | Scale (self) | Initial Rotation (X Y Z) (degree) |
+|--------------|--------------------------|--------------|----------|
+| truck        | 2 -1.8 2                 | big          | 10 0 0   |
+| treehill     | 2 -1.3 2                 | medium       | 25 0 0   |
+| train        | 2 -0.7 2                 | big          | -10 0 0  |
+| stump        | 2 -4.5 2                 | big          | 50 0 0   |
+| room         | 0 -2.5 0                 | small        | 25 0 0   |
+| playroom     | 0 -0.4 0                 | small        | 25 0 0   |
+| kitchen      | -4 -1 -1                 | small        | 30 0 0   |
+| garden       | -4 -1.2 -1               | medium       | 30 0 0   |
+| flowers      | -2 1.7 1                 | small        | 25 0 0   |
+| drjohnson    | 0 0 0                    | medium       | 30 0 -90 |
+| counter      | -1 -3.5 2                | small        | 35 0 0   |
+| bonsai       | -1 -2.5 2                | small        | 25 0 0   |
+| bicycle      | -1 -1.5 2                | medium       | 15 0 0   |
 
+ The table above gives some reference values for intialization. To adjust the initial location and orientation in Headset Mode, run the following code: 
+```sh
+SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2 --initial-position <x> <y> <z> --initial-rotation <X> <Y> <Z>
+#SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position 2 -1.8 2 --initial-rotation 10 0 0
+```
 1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2` 
   ```sh
   #For example

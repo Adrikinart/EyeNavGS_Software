@@ -34,7 +34,7 @@ namespace sibr
         /// Constructor.
         std::string OutputName;
 
-        explicit OpenXRRdrMode(sibr::Window& window);
+        explicit OpenXRRdrMode(sibr::Window& window, Eigen::Vector3f ipos, Eigen::Vector4f iq);
         ~OpenXRRdrMode();
 
         sibr::Window* XRwindow;
@@ -78,8 +78,6 @@ namespace sibr
         /** GUI for configuring OpenXR rendering */
         void onGui();
 
-         Eigen::Vector3f translation;
-         Eigen::Matrix3f Rotation;
 
   /*  Eigen::Matrix3f Rotation= (Eigen::Matrix3f()<<
             1.0f, 0.0f, 0.0f,

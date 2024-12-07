@@ -146,10 +146,6 @@ int main(int ac, char** av)
 	uint rendering_height = myArgs.rendering_size.get()[1];
 	
 
-	float x_deg = myArgs.initial_rotation.get()[0]; // Rotation about X-axis
-	float y_deg = myArgs.initial_rotation.get()[1]; // Rotation about Y-axis
-	float z_deg = myArgs.initial_rotation.get()[2];  // Rotation about Z-axis
-
 
 	// window size
 	uint win_width = rendering_width; // myArgs.win_width;
@@ -264,25 +260,23 @@ int main(int ac, char** av)
 	
 	// Add views to mvm.
 	MultiViewManager        multiViewManager(window, false);
-		
+	
 	switch (myArgs.rendering_mode) {
 		case 1:
 			multiViewManager.renderingMode(IRenderingMode::Ptr(new StereoAnaglyphRdrMode()));
 			break;
 		case 2: {
-			auto mode = new OpenXRRdrMode(window);
+			Eigen::Vector4f iq = myArgs.initial_quaternion.get();
+			SIBR_LOG << iq << myArgs.initial_position.get() << '\n';
+			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq);
 			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
-			mode->translation.x() = myArgs.initial_position.get()[0];
-			mode->translation.y() = myArgs.initial_position.get()[1];
-			mode->translation.z() = myArgs.initial_position.get()[2];
-			mode->Rotation = eulerToRotationMatrix(x_deg, y_deg, z_deg);
-			SIBR_LOG << mode->translation << "This is initial position";
 			break;
 		}
 		case 3: {//record video in headset
 			if (!myArgs.Inpath.isInit())
 				myArgs.Inpath = myArgs.Inpath.get();
-			auto mode = new OpenXRRdrMode(window);
+			Eigen::Vector4f iq = myArgs.initial_quaternion.get();
+			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq);
 			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
 			mode->StartReplay(myArgs.Inpath.get());
 			break;
@@ -298,7 +292,6 @@ int main(int ac, char** av)
 			break;
 			
 	}
-	
 	multiViewManager.addIBRSubView("Point view", gaussianView, usedResolution, ImGuiWindowFlags_ResizeFromAnySide | ImGuiWindowFlags_NoBringToFrontOnFocus);
 	multiViewManager.addCameraForView("Point view", generalCamera);
 

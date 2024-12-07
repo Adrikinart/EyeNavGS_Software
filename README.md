@@ -21,26 +21,26 @@ First of all, checkout the repository
 4. Then you can run it by the following steps
 
 ## How to save traces
-| Dataset_Name | Initial Position (x y z) | Scale (self) | Initial Rotation (X Y Z) (degree) |
-|--------------|--------------------------|--------------|----------|
-| truck        | 2 -1.8 2                 | big          | 10 0 0   |
-| treehill     | 2 -1.3 2                 | medium       | 25 0 0   |
-| train        | 2 -0.7 2                 | big          | -10 0 0  |
-| stump        | 2 -4.5 2                 | big          | 50 0 0   |
-| room         | 0 -2.5 0                 | small        | 25 0 0   |
-| playroom     | 0 -0.4 0                 | small        | 25 0 0   |
-| kitchen      | -4 -1 -1                 | small        | 30 0 0   |
-| garden       | -4 -1.2 -1               | medium       | 30 0 0   |
-| flowers      | -2 1.7 1                 | small        | 25 0 0   |
-| drjohnson    | 0 0 0                    | medium       | 30 0 -90 |
-| counter      | -1 -3.5 2                | small        | 35 0 0   |
-| bonsai       | -1 -2.5 2                | small        | 25 0 0   |
-| bicycle      | -1 -1.5 2                | medium       | 15 0 0   |
+| Dataset_Name | Initial Position (x y z) | Scale (self) | Quaternion (X Y Z W)       |
+|--------------|--------------------------|--------------|----------------------------|
+| truck        | -2 1.8 -2                | big          |-0.0872 0.0000 0.0000 0.9962|
+| treehill     | -2 1.3 -2                | medium       |-0.2164 0.0000 0.0000 0.9763|
+| train        | -2 1.3 -2                | big          |0.0872 0.0000 0.0000 0.9962 |
+| stump        | -2 2.5 -2                | medium       |-0.4226 0.0000 0.0000 0.9063|
+| room         | 0 2.5 0                  | small        |-0.2164 0.0000 0.0000 0.9763|
+| playroom     | 0 1.2 0                  | small        |-0.2164 0.0000 0.0000 0.9763|
+| kitchen      |  4 1 1                   | small        |-0.3420 0.0000 0.0000 0.9397|
+| garden       | 4 1.7 1                  | medium       |-0.2588 0.0000 0.0000 0.9659|
+| flowers      | 2 0 -5                   | small        |0.1305 0.0000 0.0000 0.9914 |
+| drjohnson    | 0 1.5 0                  | medium       |-0.2126 0.2126 0.6744 0.6744|
+| counter      | 1 2 -2                   | small        |-0.3007 0.0000 0.0000 0.9537|
+| bonsai       | 1 2.5 -2                 | small        |-0.3420 0.0000 0.0000 0.9397|
+| bicycle      | 1 1.2 -2                 | medium       |-0.1305 0.0000 0.0000 0.9914|
 
  The table above gives some reference values for intialization. To adjust the initial location and orientation in Headset Mode, run the following code: 
 ```sh
-SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2 --initial-position <x> <y> <z> --initial-rotation <X> <Y> <Z>
-#SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position 2 -1.8 2 --initial-rotation 10 0 0
+SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2 --initial-position <x> <y> <z> --initial-quaternion <X> <Y> <Z> <W>
+#SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position -2 1.8 -2 --initial-quaternion -0.0872 0.0000 0.0000 0.9962
 ```
 1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2` 
   ```sh

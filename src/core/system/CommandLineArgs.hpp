@@ -387,7 +387,7 @@ namespace sibr
 	struct SIBR_SYSTEM_EXPORT RenderingArgs {
 		Arg<std::string> scene_metadata_filename = { "scene", "scene_metadata.txt", "scene metadata file" };
 		Arg<Vector2i> rendering_size = { "rendering-size", { 1200, 789 }, "size at which rendering is performed" };
-		Arg<sibr::Vector3f> initial_rotation = { "initial-rotation",{0.0f, 0.0f, 0.0f},"initial rotation adjustment" };
+		Arg<sibr::Vector4f> initial_quaternion = { "initial-quaternion",{0.0f, 0.0f, 0.0f,1.0f},"initial quaternion adjustment" };
 		Arg<sibr::Vector3f> initial_position = { "initial-position",{0.0f, 0.0f, 0.0f},"initial position adjustment" };
 		Arg<int> texture_width = { "texture-width", 0 , "size of the input data in memory"};
 		Arg<float> texture_ratio = { "texture-ratio", 1.0f };

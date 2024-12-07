@@ -42,7 +42,7 @@ namespace sibr
     }
 #endif
 
-    OpenXRRdrMode::OpenXRRdrMode(sibr::Window &window)
+    OpenXRRdrMode::OpenXRRdrMode(sibr::Window &window, Eigen::Vector3f ipos, Eigen::Vector4f iq)
     {
         XRwindow = &window;
         m_quadShader.init("Texture",
@@ -51,7 +51,7 @@ namespace sibr
 
         m_openxrHmd = std::make_unique<OpenXRHMD>("Gaussian splatting");
         m_openxrHmd->init();
-
+        m_openxrHmd->setInitialPose(ipos, iq);
         bool sessionCreated = false;
 #if defined(XR_USE_PLATFORM_XLIB)
         sessionCreated = m_openxrHmd->startSession(createXrGraphicsBindingOpenGLXlibKHR(glfwGetX11Display(), glXGetCurrentDrawable(), glfwGetGLXContext(window.GLFW())));
@@ -179,11 +179,6 @@ namespace sibr
                                      auto q = PlayMode == 2 ? viewData.quaternion : this->m_openxrHmd->getPoseQuaternion(eye);
                                      auto pos = PlayMode == 2 ? viewData.position : this->m_openxrHmd->getPosePosition(eye);
 
-                                     Eigen::Matrix3f temp;
-                                     temp = Rotation * q.matrix();
-                                     q = Eigen::Quaternionf(temp);
-
-                                     pos += translation;
                                      // OpenXR eye position is in world coordinates system (+x: right, +y: up; +z: backward)
                                      // 3DGS reference scenes have the following coordinate system : +x: right, +y: down, +z: forward
                                      // Let's rotate the camera to have the right-side up scene

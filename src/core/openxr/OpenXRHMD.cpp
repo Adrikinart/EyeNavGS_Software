@@ -56,7 +56,7 @@ namespace sibr
     }
 
     // we need an identity pose for creating spaces without offsets
-    static XrPosef identity_pose = {.orientation = {.x = 0, .y = 0, .z = 0, .w = 1.0},
+    static XrPosef identity_pose = {.orientation = {.x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f},
                                     .position = {.x = 0.0f, .y = 0.0f, .z = 0.0f}};
 
 // See https://www.khronos.org/opengl/wiki/Load_OpenGL_Functions
@@ -111,6 +111,7 @@ namespace sibr
 
         return Vector3f(roll, pitch, yaw);
     }
+
 
     XrQuaternionf OpenXRHMD::eulerAnglestoQuaternion(float roll, float pitch, float yaw) // roll (x), pitch (Y), yaw (z)
     {
@@ -620,6 +621,18 @@ namespace sibr
         }
 
         return m_status != SessionStatus::FAILURE;
+    }
+
+    void OpenXRHMD::setInitialPose(Eigen::Vector3f pos, Eigen::Vector4f q) {
+
+        identity_pose.position.x = pos.x();
+        identity_pose.position.y = pos.y();
+        identity_pose.position.z = pos.z();
+
+        identity_pose.orientation.x = q.x();
+        identity_pose.orientation.y = q.y();
+        identity_pose.orientation.z = q.z();
+        identity_pose.orientation.w = q.w();
     }
 
     void OpenXRHMD::setIdleAppCallback(const std::function<void()> &callback)

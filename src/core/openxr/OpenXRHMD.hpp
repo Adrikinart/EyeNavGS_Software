@@ -151,6 +151,9 @@ namespace sibr
          */
         bool pollEvents();
 
+
+        void setInitialPose(Eigen::Vector3f pos, Eigen::Vector4f q);
+
         /**
          * @brief Callback to be notified when the headset idles the XR session
          */
@@ -287,6 +290,7 @@ namespace sibr
             return m_runtimeVersion;
         }
 
+        
     private:
         // Name of the application displayed in the headset
         std::string m_applicationName;

@@ -289,7 +289,10 @@ namespace sibr
         {
             return m_runtimeVersion;
         }
-
+        XrPosef initial_adjustment = {
+        {0.0f, 0.0f, 0.0f, 1.0f},  // orientation
+        {0.0f, 0.0f, 0.0f}         // position
+        };
         
     private:
         // Name of the application displayed in the headset

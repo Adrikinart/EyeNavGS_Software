@@ -442,7 +442,7 @@ namespace sibr
         XrReferenceSpaceCreateInfo m_playSpace_create_info = {.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
                                                               .next = NULL,
                                                               .referenceSpaceType = m_playSpaceType,
-                                                              .poseInReferenceSpace = identity_pose};
+                                                              .poseInReferenceSpace = initial_adjustment};
 
         XrResult result = xrCreateReferenceSpace(m_session, &m_playSpace_create_info, &m_playSpace);
         if (!xrCheck(m_instance, result, "Failed to create play space!"))
@@ -623,16 +623,21 @@ namespace sibr
         return m_status != SessionStatus::FAILURE;
     }
 
+    XrQuaternionf multiply(const Vector4f q1, const XrQuaternionf& q2) {
+        XrQuaternionf result;
+        result.w = q1.w() * q2.w - q1.x() * q2.x - q1.y() * q2.y - q1.z() * q2.z;
+        result.x = q1.w() * q2.x + q1.x() * q2.w + q1.y() * q2.z - q1.z() * q2.y;
+        result.y = q1.w() * q2.y - q1.x() * q2.z + q1.y() * q2.w + q1.z() * q2.x;
+        result.z = q1.w() * q2.z + q1.x() * q2.y - q1.y() * q2.x + q1.z() * q2.w;
+        return result;
+    }
     void OpenXRHMD::setInitialPose(Eigen::Vector3f pos, Eigen::Vector4f q) {
 
-        identity_pose.position.x = pos.x();
-        identity_pose.position.y = pos.y();
-        identity_pose.position.z = pos.z();
+        initial_adjustment.position.x = pos.x() + identity_pose.position.x;
+        initial_adjustment.position.y = pos.y() + identity_pose.position.y;
+        initial_adjustment.position.z = pos.z() + identity_pose.position.z;
 
-        identity_pose.orientation.x = q.x();
-        identity_pose.orientation.y = q.y();
-        identity_pose.orientation.z = q.z();
-        identity_pose.orientation.w = q.w();
+        initial_adjustment.orientation = multiply(q, identity_pose.orientation);
     }
 
     void OpenXRHMD::setIdleAppCallback(const std::function<void()> &callback)

@@ -631,13 +631,14 @@ namespace sibr
         result.z = q1.w() * q2.z + q1.x() * q2.y - q1.y() * q2.x + q1.z() * q2.w;
         return result;
     }
-    void OpenXRHMD::setInitialPose(Eigen::Vector3f pos, Eigen::Vector4f q) {
+    void OpenXRHMD::setInitialPose(Eigen::Vector3f pos, Eigen::Vector4f q, float s) {
 
-        initial_adjustment.position.x = pos.x() + identity_pose.position.x;
-        initial_adjustment.position.y = pos.y() + identity_pose.position.y;
-        initial_adjustment.position.z = pos.z() + identity_pose.position.z;
+        initial_adjustment.position.x = pos.x() + identity_pose.position.x * s;
+        initial_adjustment.position.y = pos.y() + identity_pose.position.y * s;
+        initial_adjustment.position.z = pos.z() + identity_pose.position.z * s;
 
         initial_adjustment.orientation = multiply(q, identity_pose.orientation);
+        scale = s;
     }
 
     void OpenXRHMD::setIdleAppCallback(const std::function<void()> &callback)
@@ -802,7 +803,14 @@ namespace sibr
 
         XrViewState view_state = {.type = XR_TYPE_VIEW_STATE, .next = NULL};
         result = xrLocateViews(m_session, &view_locate_info, &view_state, m_viewCount, &m_viewCount, views);
-
+        // Scaling the position
+        XrView* ptr = views;
+        for (uint32_t i = 0; i < m_viewCount; i++) {
+            ptr->pose.position.x = ptr->pose.position.x * scale;
+            ptr->pose.position.y = ptr->pose.position.y * scale;
+            ptr->pose.position.z = ptr->pose.position.z * scale;
+            ptr++;
+        }
         if (!xrCheck(m_instance, result, "Could not locate views"))
             return false;
 

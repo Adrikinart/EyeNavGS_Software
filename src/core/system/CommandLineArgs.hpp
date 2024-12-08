@@ -389,6 +389,7 @@ namespace sibr
 		Arg<Vector2i> rendering_size = { "rendering-size", { 1200, 789 }, "size at which rendering is performed" };
 		Arg<sibr::Vector4f> initial_quaternion = { "initial-quaternion",{0.0f, 0.0f, 0.0f,1.0f},"initial quaternion adjustment" };
 		Arg<sibr::Vector3f> initial_position = { "initial-position",{0.0f, 0.0f, 0.0f},"initial position adjustment" };
+		Arg<float> initial_scale = { "initial-scale",0.0f,"initial scale adjustment" };
 		Arg<int> texture_width = { "texture-width", 0 , "size of the input data in memory"};
 		Arg<float> texture_ratio = { "texture-ratio", 1.0f };
 		Arg<int> rendering_mode = { "rendering-mode", RENDERMODE_MONO, "select mono (0), stereo anaglyph (1) or openxr (2) rendering mode" };

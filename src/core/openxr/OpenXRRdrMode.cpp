@@ -170,6 +170,7 @@ namespace sibr
                                      auto pos = this->m_openxrHmd->getPosePosition(eye);
                                     */
                                      //Call loadViewData to replay
+                                     
                                      ViewData viewData;
                                      if (PlayMode == 2) {
                                          loadViewData(viewData);
@@ -179,6 +180,16 @@ namespace sibr
                                      auto q = PlayMode == 2 ? viewData.quaternion : this->m_openxrHmd->getPoseQuaternion(eye);
                                      auto pos = PlayMode == 2 ? viewData.position : this->m_openxrHmd->getPosePosition(eye);
 
+                                     if (viewIndex == 0) {
+                                         otherEye = this->m_openxrHmd->getPosePosition(OpenXRHMD::Eye::RIGHT);
+                                         Eigen::Vector3f gap = (otherEye - pos) / 2.0f;
+                                         pos += gap * eyeScale;
+                                     }
+                                     else {
+                                         otherEye = this->m_openxrHmd->getPosePosition(OpenXRHMD::Eye::LEFT);
+                                         Eigen::Vector3f gap = (otherEye - pos) / 2.0f;
+                                         pos += gap * eyeScale;
+                                     }
                                      // OpenXR eye position is in world coordinates system (+x: right, +y: up; +z: backward)
                                      // 3DGS reference scenes have the following coordinate system : +x: right, +y: down, +z: forward
                                      // Let's rotate the camera to have the right-side up scene
@@ -351,7 +362,6 @@ namespace sibr
             
             if (!outFile.is_open()) {
                 const std::string& out = "Output" + std::to_string(FrameIndex++)+".csv";
-                StartReplay(out);
                 outFile.open(out, std::ios::app);
                 // Write the CSV header if the file is being created
                 if (outFile.tellp() == 0) {
@@ -373,7 +383,7 @@ namespace sibr
             
         }
 
-
+        ImGui::SliderFloat("Scale Adjustment", &eyeScale,-1.0f,1.0f);
 
         if (m_openxrHmd->isSessionRunning())
         {

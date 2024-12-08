@@ -802,6 +802,7 @@ namespace sibr
 
         XrViewState view_state = {.type = XR_TYPE_VIEW_STATE, .next = NULL};
         result = xrLocateViews(m_session, &view_locate_info, &view_state, m_viewCount, &m_viewCount, views);
+
         if (!xrCheck(m_instance, result, "Could not locate views"))
             return false;
 

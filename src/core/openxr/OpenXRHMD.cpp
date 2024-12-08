@@ -806,9 +806,9 @@ namespace sibr
         // Scaling the position
         XrView* ptr = views;
         for (uint32_t i = 0; i < m_viewCount; i++) {
-            ptr->pose.position.x = ptr->pose.position.x + (ptr->pose.position.x - initial_adjustment.position.x) * scale;
-            ptr->pose.position.y = ptr->pose.position.y + (ptr->pose.position.y - initial_adjustment.position.y) * scale;
-            ptr->pose.position.z = ptr->pose.position.z + (ptr->pose.position.z - initial_adjustment.position.z) * scale;
+            ptr->pose.position.x = ptr->pose.position.x + (ptr->pose.position.x - initial_adjustment.position.x) / scale;
+            ptr->pose.position.y = ptr->pose.position.y + (ptr->pose.position.y - initial_adjustment.position.y) / scale;
+            ptr->pose.position.z = ptr->pose.position.z + (ptr->pose.position.z - initial_adjustment.position.z) / scale;
             ptr++;
         }
         if (!xrCheck(m_instance, result, "Could not locate views"))

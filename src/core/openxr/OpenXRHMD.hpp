@@ -152,7 +152,7 @@ namespace sibr
         bool pollEvents();
 
 
-        void setInitialPose(Eigen::Vector3f pos, Eigen::Vector4f q);
+        void setInitialPose(Eigen::Vector3f pos, Eigen::Vector4f q, float scale);
 
         /**
          * @brief Callback to be notified when the headset idles the XR session
@@ -289,10 +289,14 @@ namespace sibr
         {
             return m_runtimeVersion;
         }
+
+
         XrPosef initial_adjustment = {
         {0.0f, 0.0f, 0.0f, 1.0f},  // orientation
         {0.0f, 0.0f, 0.0f}         // position
         };
+
+        float scale = 1.0;
         
     private:
         // Name of the application displayed in the headset

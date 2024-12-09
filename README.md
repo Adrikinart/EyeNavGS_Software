@@ -9,40 +9,51 @@ First of all, checkout the repository
   ```sh
   git clone https://github.com/symmru/SIBR_Gaussian_VRV.git
   ```
-1. Follow the [Install requirements](#install-requirements) and make sure they are in the PATH
+1. Follow the [Install requirements](#install-requirements) and make sure they are in the PATH, run the command below to test:
+```sh
+python --version
+doxygen --version
+nvcc --version
+cmake --version
+```
 2. Download and unzip the dataset from "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip"
-3. Open Cmake-gui, select the repo root as a source directory, `build/` as the build directory. Configure, select the Visual Studio C++ Win64 compiler
-4. Select the projects you want to generate among the BUILD elements in the list (you can group Cmake flags by categories to access those faster). Generate
+3. Open Cmake-gui, select the repo root as a source directory, `build/` as the build directory. Press "Configure", select the Visual Studio C++ Win64 compiler
 
+![openxr gaussian viewer](./docs/img/cmake-0.png)
+![openxr gaussian viewer](./docs/img/Cmake-1.png)
+4. Select the projects you want to generate among the BUILD elements in the list (you can group Cmake flags by categories to access those faster). Then press “Generate”.
+![openxr gaussian viewer](./docs/img/Cmake-2.png)
 ## How to compile
 1. Open the generated Visual Studio solution (`build/sibr_projects.sln`), find `core/sibr_openxr` in Solution Explorer, change its properties to ensure the C++ standard is set to C++20 or higher
 2. Build the `ALL_BUILD` target and then the `INSTALL` target 
 3. The compiled executables will be put in `install/bin` and the `SIBR_gaussianViewer_app_d.exe` can be used to run this system (make sure `install/bin` is in your PATH)
 4. Then you can run it by the following steps
-
 ## How to save traces
-| Dataset_Name | Initial Position (x y z) | Scale (self) | Quaternion (X Y Z W)       |
-|--------------|--------------------------|--------------|----------------------------|
-| truck        | -2 1.8 -2                | big          |-0.0872 0.0000 0.0000 0.9962|
-| treehill     | -2 1.3 -2                | medium       |-0.2164 0.0000 0.0000 0.9763|
-| train        | -2 1.3 -2                | big          |0.0872 0.0000 0.0000 0.9962 |
-| stump        | -2 2.5 -2                | medium       |-0.4226 0.0000 0.0000 0.9063|
-| room         | 0 2.5 0                  | small        |-0.2164 0.0000 0.0000 0.9763|
-| playroom     | 0 1.2 0                  | small        |-0.2164 0.0000 0.0000 0.9763|
-| kitchen      |  4 1 1                   | small        |-0.3420 0.0000 0.0000 0.9397|
-| garden       | 4 1.7 1                  | medium       |-0.2588 0.0000 0.0000 0.9659|
-| flowers      | 2 0 -5                   | small        |0.1305 0.0000 0.0000 0.9914 |
-| drjohnson    | 0 1.5 0                  | medium       |-0.2126 0.2126 0.6744 0.6744|
-| counter      | 1 2 -2                   | small        |-0.3007 0.0000 0.0000 0.9537|
-| bonsai       | 1 2.5 -2                 | small        |-0.3420 0.0000 0.0000 0.9397|
-| bicycle      | 1 1.2 -2                 | medium       |-0.1305 0.0000 0.0000 0.9914|
+| Dataset_Name | Initial Position (x y z)    | Quaternion (X Y Z W)                            | Scale (float)        |
+|--------------|-----------------------------|-------------------------------------------------|----------------------|
+| truck        | --initial-position -2 1.8 -4|--initial-quaternion -0.0872 0.0000 0.0000 0.9962|--initial-scale 0.8   |
+| treehill     |--initial-position  2 1 2    |--initial-quaternion -0.2164 0.0000 0.0000 0.9763|--initial-scale 1     |
+| train        |--initial-position  2 0 3    |--initial-quaternion 0.0872 0.0000 0.0000 0.9962 |--initial-scale 0.2   |
+| stump        |--initial-position  -1 1.1 -2|--initial-quaternion -0.4226 0.0000 0.0000 0.9063|--initial-scale 3     |
+| room         |--initial-position  0 1.1 0  |--initial-quaternion -0.2164 0.0000 0.0000 0.9763|--initial-scale 2     |
+| playroom     |--initial-position  0 0.8 0  |--initial-quaternion -0.2164 0.0000 0.0000 0.9763|--initial-scale 2     |
+| kitchen      |--initial-position  0.6 0.7 0|--initial-quaternion -0.3420 0.0000 0.0000 0.9397|--initial-scale 5     |
+| garden       |--initial-position  4 1.7 1  |--initial-quaternion -0.2588 0.0000 0.0000 0.9659|--initial-scale 1     |
+| flowers      |--initial-position  0 0 -2   |--initial-quaternion 0.1305 0.0000 0.0000 0.9914 |--initial-scale 1     |
+| drjohnson    |--initial-position  0 1.5 0  |--initial-quaternion -0.2126 0.2126 0.6744 0.6744|--initial-scale 1     |
+| counter      |--initial-position  0 1 -0.3 |--initial-quaternion -0.3007 0.0000 0.0000 0.9537|--initial-scale 4     |
+| bonsai       |--initial-position  0.7 1 -1 |--initial-quaternion -0.3420 0.0000 0.0000 0.9397|--initial-scale 3     |
+| bicycle      |--initial-position  1 0.9 -2 |--initial-quaternion -0.1305 0.0000 0.0000 0.9914|--initial-scale 0.2   |
 
- The table above gives some reference values for intialization. To adjust the initial location and orientation in Headset Mode, run the following code: 
+ The table above gives some reference values for intialization. (Scale means the the scale of user's virtual body, with higher scale, user will see a smaller world.)
+
+ To adjust the initial Location, Orientation and Scale in Headset Mode, run the following code: 
 ```sh
-SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2 --initial-position <x> <y> <z> --initial-quaternion <X> <Y> <Z> <W>
-#SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position -2 1.8 -2 --initial-quaternion -0.0872 0.0000 0.0000 0.9962
+SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2 --initial-position <x> <y> <z> --initial-quaternion <X> <Y> <Z> <W> --initial-scale <float>
+#SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position -2 1.8 -2 --initial-quaternion -0.0872 0.0000 0.0000 0.9962 --initial-scale 0.8
+#Default initial position 0 0 0, default initial quaternion 0 0 0 1, default initial scale 1.0
 ```
-1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2` 
+1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 0`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2` 
   ```sh
   #For example
   SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train --rendering-mode

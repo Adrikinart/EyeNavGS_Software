@@ -42,7 +42,7 @@ namespace sibr
     }
 #endif
 
-    OpenXRRdrMode::OpenXRRdrMode(sibr::Window &window, Eigen::Vector3f ipos, Eigen::Vector4f iq)
+    OpenXRRdrMode::OpenXRRdrMode(sibr::Window &window, Eigen::Vector3f ipos, Eigen::Vector4f iq, float scale)
     {
         XRwindow = &window;
         m_quadShader.init("Texture",
@@ -51,7 +51,7 @@ namespace sibr
 
         m_openxrHmd = std::make_unique<OpenXRHMD>("Gaussian splatting");
         m_openxrHmd->init();
-        m_openxrHmd->setInitialPose(ipos, iq);
+        m_openxrHmd->setInitialPose(ipos, iq, scale);
         bool sessionCreated = false;
 #if defined(XR_USE_PLATFORM_XLIB)
         sessionCreated = m_openxrHmd->startSession(createXrGraphicsBindingOpenGLXlibKHR(glfwGetX11Display(), glXGetCurrentDrawable(), glfwGetGLXContext(window.GLFW())));
@@ -170,6 +170,7 @@ namespace sibr
                                      auto pos = this->m_openxrHmd->getPosePosition(eye);
                                     */
                                      //Call loadViewData to replay
+                                     
                                      ViewData viewData;
                                      if (PlayMode == 2) {
                                          loadViewData(viewData);
@@ -351,7 +352,6 @@ namespace sibr
             
             if (!outFile.is_open()) {
                 const std::string& out = "Output" + std::to_string(FrameIndex++)+".csv";
-                StartReplay(out);
                 outFile.open(out, std::ios::app);
                 // Write the CSV header if the file is being created
                 if (outFile.tellp() == 0) {
@@ -372,7 +372,6 @@ namespace sibr
             SIBR_LOG << "Saving Finished" << std::endl;
             
         }
-
 
 
         if (m_openxrHmd->isSessionRunning())

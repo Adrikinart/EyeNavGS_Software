@@ -636,7 +636,7 @@ namespace sibr
         initial_adjustment.position.x = pos.x() + identity_pose.position.x;
         initial_adjustment.position.y = pos.y() + identity_pose.position.y;
         initial_adjustment.position.z = pos.z() + identity_pose.position.z;
-
+        SIBR_LOG << pos << std::endl;
         initial_adjustment.orientation = multiply(q, identity_pose.orientation);
         scale = s;
     }
@@ -806,9 +806,9 @@ namespace sibr
         // Scaling the position
         XrView* ptr = views;
         for (uint32_t i = 0; i < m_viewCount; i++) {
-            ptr->pose.position.x = ptr->pose.position.x + (ptr->pose.position.x - initial_adjustment.position.x) / scale;
-            ptr->pose.position.y = ptr->pose.position.y + (ptr->pose.position.y - initial_adjustment.position.y) / scale;
-            ptr->pose.position.z = ptr->pose.position.z + (ptr->pose.position.z - initial_adjustment.position.z) / scale;
+            ptr->pose.position.x = initial_adjustment.position.x + (ptr->pose.position.x - initial_adjustment.position.x) * scale;
+            ptr->pose.position.y = initial_adjustment.position.y + (ptr->pose.position.y - initial_adjustment.position.y) * scale;
+            ptr->pose.position.z = initial_adjustment.position.z + (ptr->pose.position.z - initial_adjustment.position.z) * scale;
             ptr++;
         }
         if (!xrCheck(m_instance, result, "Could not locate views"))

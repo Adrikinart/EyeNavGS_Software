@@ -21,28 +21,29 @@ First of all, checkout the repository
 4. Then you can run it by the following steps
 
 ## How to save traces
-| Dataset_Name | Initial Position (x y z) | Scale (self) | Quaternion (X Y Z W)       |
-|--------------|--------------------------|--------------|----------------------------|
-| truck        | -2 1.8 -2                | big          |-0.0872 0.0000 0.0000 0.9962|
-| treehill     | -2 1.3 -2                | medium       |-0.2164 0.0000 0.0000 0.9763|
-| train        | -2 1.3 -2                | big          |0.0872 0.0000 0.0000 0.9962 |
-| stump        | -2 2.5 -2                | medium       |-0.4226 0.0000 0.0000 0.9063|
-| room         | 0 2.5 0                  | small        |-0.2164 0.0000 0.0000 0.9763|
-| playroom     | 0 1.2 0                  | small        |-0.2164 0.0000 0.0000 0.9763|
-| kitchen      |  4 1 1                   | small        |-0.3420 0.0000 0.0000 0.9397|
-| garden       | 4 1.7 1                  | medium       |-0.2588 0.0000 0.0000 0.9659|
-| flowers      | 2 0 -5                   | small        |0.1305 0.0000 0.0000 0.9914 |
-| drjohnson    | 0 1.5 0                  | medium       |-0.2126 0.2126 0.6744 0.6744|
-| counter      | 1 2 -2                   | small        |-0.3007 0.0000 0.0000 0.9537|
-| bonsai       | 1 2.5 -2                 | small        |-0.3420 0.0000 0.0000 0.9397|
-| bicycle      | 1 1.2 -2                 | medium       |-0.1305 0.0000 0.0000 0.9914|
+| Dataset_Name | Initial Position (x y z) | Scale | Quaternion (X Y Z W)       |
+|--------------|--------------------------|-------|----------------------------|
+| truck        | -2 1.8 -4                | 0.8   |-0.0872 0.0000 0.0000 0.9962|
+| treehill     | 2 1 2                    | 1     |-0.2164 0.0000 0.0000 0.9763|
+| train        | 2 0 3                    | 0.2   |0.0872 0.0000 0.0000 0.9962 |
+| stump        | -1 1.1 -2                | 3     |-0.4226 0.0000 0.0000 0.9063|
+| room         | 0 1.1 0                  | 2     |-0.2164 0.0000 0.0000 0.9763|
+| playroom     | 0 0.8 0                  | 2     |-0.2164 0.0000 0.0000 0.9763|
+| kitchen      |  0.6 0.7 0               | 5     |-0.3420 0.0000 0.0000 0.9397|
+| garden       | 4 1.7 1                  | 1     |-0.2588 0.0000 0.0000 0.9659|
+| flowers      | 0 0 -2                   | 1     |0.1305 0.0000 0.0000 0.9914 |
+| drjohnson    | 0 1.5 0                  | 1     |-0.2126 0.2126 0.6744 0.6744|
+| counter      | 0 1.0 -0.3               | 4     |-0.3007 0.0000 0.0000 0.9537|
+| bonsai       | 0.7 1 -1                 | 3     |-0.3420 0.0000 0.0000 0.9397|
+| bicycle      | 1 0.9 -2                 | 0.2   |-0.1305 0.0000 0.0000 0.9914|
 
  The table above gives some reference values for intialization. To adjust the initial location and orientation in Headset Mode, run the following code: 
 ```sh
-SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2 --initial-position <x> <y> <z> --initial-quaternion <X> <Y> <Z> <W>
-#SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position -2 1.8 -2 --initial-quaternion -0.0872 0.0000 0.0000 0.9962
+SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2 --initial-position <x> <y> <z> --initial-quaternion <X> <Y> <Z> <W> --initial-scale <float>
+#SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position -2 1.8 -2 --initial-quaternion -0.0872 0.0000 0.0000 0.9962 --initial-scale 0.8
+#default initial position 0 0 0, default initial quaternion 0 0 0 1, default initial scale 1.0
 ```
-1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2` 
+1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 0`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2` 
   ```sh
   #For example
   SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train --rendering-mode

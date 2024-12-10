@@ -186,11 +186,12 @@ namespace sibr
                                      
                                     //-----save position and quaternion to file
                                     
-                                     if (PlayMode == 0)
+                                     if (PlayMode == 0) {
                                          outFile << viewIndex << "," // View index
-                                         << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
-                                         << pos.x() << "," << pos.y() << "," << pos.z() << ","
-                                         << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << "\n";
+                                             << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
+                                             << pos.x() << "," << pos.y() << "," << pos.z() << ","
+                                             << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << "\n";
+                                     }
                                      
                                      if (true)
                                      {
@@ -287,8 +288,10 @@ namespace sibr
                                          // write frame to different video according to the viewIndex(0 is left, 1 is right)
                                          if (viewIndex == 0 && leftEyeVideoWriter.isOpened()) {
                                              leftEyeVideoWriter.write(frame); // left eye
+                                             leftEyeVideoWriter.write(frame); // left eye
                                          }
                                          else if (viewIndex == 1 && rightEyeVideoWriter.isOpened()) {
+                                             rightEyeVideoWriter.write(frame); // right eye
                                              rightEyeVideoWriter.write(frame); // right eye
                                          }
 

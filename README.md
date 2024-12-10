@@ -1,34 +1,98 @@
+# Environment Setup
+
+1. **Clone the repository:**
+   ```sh
+   git clone https://github.com/symmru/SIBR_Gaussian_VRV.git
+   ```
+
+2. **Install requirements and ensure they are in your PATH:**
+
+    Follow the [Install requirements](#install-requirements) and make sure they are in the PATH, run the command below to test:
+
+   ```sh
+   python --version
+   doxygen --version
+   nvcc --version
+   cmake --version
+   ```
+3. **Download and unzip the dataset:**
+
+   Download the pretrained model data from:
+   ```
+   https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip
+   ```
+   Extract it into a directory of your choice (e.g., `C:\User\SIBR\models`).
 
 
-# SIBR Gaussian VR Viewer
-- If you want to read the original README.md file, please click [SIBR Core](#sibr-core). Or if you want to use VR viewer, please read the following instructions.
+# Compilation
 
-## How to set up
+1. **Generate Visual Studio project with CMake-GUI:**
+   - Open CMake-GUI.
+   
+       ![openxr gaussian viewer](./docs/img/cmake-0.png)
 
-First of all, checkout the repository
-  ```sh
-  git clone https://github.com/symmru/SIBR_Gaussian_VRV.git
-  ```
-1. Follow the [Install requirements](#install-requirements) and make sure they are in the PATH, run the command below to test:
-```sh
-python --version
-doxygen --version
-nvcc --version
-cmake --version
-```
-2. Download and unzip the dataset from "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip"
-3. Open Cmake-gui, select the repo root as a source directory, `build/` as the build directory. Press "Configure", select the Visual Studio C++ Win64 compiler
+   - Set the source directory to the repository root and the build directory to `build/`.
 
-![openxr gaussian viewer](./docs/img/cmake-0.png)
-![openxr gaussian viewer](./docs/img/Cmake-1.png)
-4. Select the projects you want to generate among the BUILD elements in the list (you can group Cmake flags by categories to access those faster). Then press “Generate”.
-![openxr gaussian viewer](./docs/img/Cmake-2.png)
-## How to compile
-1. Open the generated Visual Studio solution (`build/sibr_projects.sln`), find `core/sibr_openxr` in Solution Explorer, change its properties to ensure the C++ standard is set to C++20 or higher
-2. Build the `ALL_BUILD` target and then the `INSTALL` target 
-3. The compiled executables will be put in `install/bin` and the `SIBR_gaussianViewer_app_d.exe` can be used to run this system (make sure `install/bin` is in your PATH)
-4. Then you can run it by the following steps
-## How to save traces
+        ![openxr gaussian viewer](./docs/img/Cmake-1.png)
+
+   - Click "Configure" and select the Visual Studio C++ Win64 compiler.
+   - Select the desired BUILD options and then click "Generate".
+        ![openxr gaussian viewer](./docs/img/Cmake-2.png)
+
+
+2. **Compile using Visual Studio:**
+   - Open `build/sibr_projects.sln` in Visual Studio.
+   - For the `core/sibr_openxr` project, set the C++ standard to C++20 or higher.
+   - Build the `ALL_BUILD` target, then the `INSTALL` target.
+
+   The resulting executables will be placed in `install/bin`. The main executable is:
+   ```
+   SIBR_gaussianViewer_app_d.exe
+   ```
+
+   Ensure `install/bin` is in your PATH.
+
+
+# The SIBR VR Viewer
+
+The SIBR VR Viewer allows users to visualize 3D Gaussian Splatting scenes either in a Desktop (non-VR) environment or through a VR headset using OpenXR.
+
+For more detailed documentation on the SIBR core system, please refer to the original [SIBR Core](#sibr-core) section and documentation.
+
+## Desktop Mode
+
+**What is Desktop Mode?**  
+Desktop mode runs the viewer as a monocular 2D application on the computer monitor. You can interact using a keyboard and mouse. This mode is useful for saving traces and recording camera paths without needing a VR headset.
+
+## Headset Mode
+
+**What is Headset Mode?**  
+Headset mode uses OpenXR to stream stereoscopic views to a VR headset. This mode immerses the user inside the virtual environment, allowing movement tracking through head movements. This is ideal for VR demonstrations, immersive walkthroughs, or data collection via a head-mounted display.
+
+
+# Starting the SIBR VR Viewer
+
+## Command Line Arguments
+
+The main arguments include:
+
+- `-m <dataset_path>`: Specifies the dataset (model) path.
+- `--rendering-mode <mode>`: Selects the rendering mode.
+  - `0`: Monocular desktop mode (manual navigation)
+  - `1`: Stereo anglaph desktop mode (manual navigation)
+  - `2`: Headset mode (VR)
+  - `3`: Headset mode replay (VR)
+  - `4`: Monocular desktop mode replay
+- `--initial-position <x> <y> <z>`: Set the initial position of the headset space.
+- `--initial-quaternion <X> <Y> <Z> <W>`: Set the initial orientation of the headset space using a quaternion.
+- `--initial-scale <float>`: Set the initial scale of the user’s "virtual body" (affects perceived size of the world).
+- `-in <trace_file_path>`: Specifies a recorded trace file to replay.
+- `--rendering-size <width> <height>`: Sets window size for desktop replay mode.
+
+## Example Scene Models
+
+Download example scene models from the provided link and place them in your chosen dataset directory. The following table gives some reference values for initialization of the viewer:
+
 | Dataset_Name | Initial Position (x y z)    | Quaternion (X Y Z W)                            | Scale (float)        |
 |--------------|-----------------------------|-------------------------------------------------|----------------------|
 | truck        | --initial-position -2 1.8 -4|--initial-quaternion -0.0872 0.0000 0.0000 0.9962|--initial-scale 0.8   |
@@ -45,35 +109,66 @@ cmake --version
 | bonsai       |--initial-position  0.7 1 -1 |--initial-quaternion -0.3420 0.0000 0.0000 0.9397|--initial-scale 3     |
 | bicycle      |--initial-position  1 0.9 -2 |--initial-quaternion -0.1305 0.0000 0.0000 0.9914|--initial-scale 0.2   |
 
- The table above gives some reference values for intialization. (Scale means the the scale of user's virtual body, with higher scale, user will see a smaller world.)
+## Desktop Mode
 
- To adjust the initial Location, Orientation and Scale in Headset Mode, run the following code: 
+**Example command for starting the SIBR viewer in desktop mode:**
 ```sh
-SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2 --initial-position <x> <y> <z> --initial-quaternion <X> <Y> <Z> <W> --initial-scale <float>
-#SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position -2 1.8 -2 --initial-quaternion -0.0872 0.0000 0.0000 0.9962 --initial-scale 0.8
-#Default initial position 0 0 0, default initial quaternion 0 0 0 1, default initial scale 1.0
+SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train --rendering-mode 0
 ```
-1. If use Desktop Mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 0`; if use Headset mode, run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> --rendering-mode 2` 
-  ```sh
-  #For example
-  SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train --rendering-mode
-  ```
-Then you can see 2 subwindows (OpenXR and Camera Point view) on the desktop as shown below
+  
+You will see a window with the scene rendered as a 2D view. Interact using your mouse and keyboard.
 
-![openxr gaussian viewer](./docs/img/Saving_trace_button.png) ![openxr gaussian viewer](./docs/img/Saving_trace_Desktop.png)
+![Desktop](./docs/img/Monocular_desktop.png)
 
-2. For Headset Mode: (OpenXR) After pressing "Save Traces" your movement trajectory and field of view will keep being recorded until you click "Stop Saving". Then an output file named `output[number].csv` will be generated in the current directory. (There will be more .csv files if you repeat this process)
-3. For Desktop Mode: (Camera Point view) After pressing "Record" your movement trajectory and field of view will keep being recorded until you click "Stop". Then by pressing "Save path" you can select a path to save the path files including .csv file. 
 
-## How to replay
-1. Using Headset mode(driven by SteamVR) to replay according to the trace. Run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> -in <trace_file_path> --rendering-mode 3`(Default size 2064x2272 for each eye)
-2. Using Desktop mode to replay according to the trace. Run `SIBR_gaussianViewer_app_d.exe -m <dataset_path> -in <trace_file_path> --rendering-mode 4 --rendering-size <width> <height>`(If there's no rendering-size, the default size is 1200x789)
- ```sh
-  #For example
-  SIBR_gaussianViewer_app_d.exe -m <C:\User\SIBR\models\train -in C:\User\SIBR\Test\output0.csv --rendering-mode 4 --rendering-size 1200 900
-  ```
-3. Trace Format: .csv file (viewIndex, FOV1, FOV2, FOV3, FOV4, PositionX, PositionY, PositionZ, QuaternionX, QuternionY, QuaternionZ, QuaternionW)
-![openxr gaussian viewer](./docs/img/trace_example.jpg)
+## Headset Mode
+
+**Example command for starting the SIBR viewer in headset mode:**
+```sh
+SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position -2 1.8 -2 --initial-quaternion -0.0872 0.0000 0.0000 0.9962 --initial-scale 0.8
+```
+
+With a supported OpenXR runtime (such as SteamVR on PC or Oculus Link on Windows), you can view and move around in the scene using a VR headset. And you can also see a window with 2 subwindows on the Desktop representing two eyes in the Headset.
+
+![Headset](./docs/img/Headset_mode.png)
+
+# Trace Recording
+
+You can record the camera’s movement trajectory (position), field-of-view (FOV), and orientation (quaternion) for future replay.
+
+## Desktop Mode
+
+- Start the viewer in desktop mode. Then you can see a subwindow on the desktop as shown below:
+
+    ![openxr gaussian viewer](./docs/img/Saving_trace_Desktop.png)
+
+- Click “Record” to start recording your camera path.
+- Click “Stop” to end the recording.
+- Click “Save path” to choose a location to save the recorded `.csv` file.
+
+## Headset Mode
+- Start the viewer in headset mode. Then you can see a subwindow on the desktop as shown below:
+
+    ![openxr gaussian viewer](./docs/img/Saving_trace_button.png) 
+
+- Press “Save Traces” to start recording your head movements and FOV as you move in VR.
+- Press “Stop Saving” to end recording.
+- The output files (`output[number].csv`) are saved in the current directory.
+
+    ![openxr gaussian viewer](./docs/img/output_trace.png) 
+
+# Format of Recorded Traces
+
+The recorded traces are stored in `.csv` files. Each row corresponds to a captured frame/state of the viewer.
+
+| ViewIndex |   FOV1    |   FOV2    |   FOV3    |   FOV4    | PositionX  | PositionY  | PositionZ  | QuaternionX | QuaternionY | QuaternionZ | QuaternionW |
+|-----------|-----------:|----------:|----------:|----------:|-----------:|-----------:|-----------:|------------:|------------:|------------:|------------:|
+| 0         | -0.94248   | 0.698132  | -0.95993  | 0.767945  | 0.003914   | 0.895811   | -0.07397   | 0.257321    | -0.107277   | -0.030081   | 0.959882    |
+| 1         | -0.69813   | 0.942478  | -0.95993  | 0.767945  | 0.065237   | 0.888708   | -0.06199   | 0.257321    | -0.107277   | -0.030081   | 0.959882    |
+| 0         | -0.94248   | 0.698132  | -0.95993  | 0.767945  | 0.002297   | 0.89517    | -0.0753    | 0.254336    | -0.107171   | -0.0282334  | 0.960745    |
+| 1         | -0.69813   | 0.942478  | -0.95993  | 0.767945  | 0.063636   | 0.88833    | -0.06326   | 0.254336    | -0.107171   | -0.0282334  | 0.960745    |
+| 0         | -0.94248   | 0.698132  | -0.95993  | 0.767945  | 0.002278   | 0.895369   | -0.07456   | 0.254109    | -0.108516   | -0.0283014  | 0.960652    |
+| 1         | -0.69813   | 0.942478  | -0.95993  | 0.767945  | 0.06358    | 0.888482   | -0.06235   | 0.254109    | -0.108516   | -0.0283014  | 0.960652    |
 * ViewIndex: Index used to identify left eye or right eye, 0 is left, 1 is right.  
 * FOV1: The left field of view angle.  
 * FOV2: The right field of view angle.  
@@ -82,186 +177,24 @@ Then you can see 2 subwindows (OpenXR and Camera Point view) on the desktop as s
 * PositionX,Y,Z: The camera's position coordinates in 3D space, defining where the camera is located.  
 * QuaternionX,Y,Z,W: Defines the camera's rotation as a quaternion, which represents 3D rotations without the risk of gimbal lock.
 
----
 
-# SIBR Core
+# Trace Replay
 
-**SIBR** is a System for Image-Based Rendering.  
-It is built around the *sibr-core* in this repo and several *Projects* implementing published research papers.  
-For more complete documentation, see here: [SIBR Documentation](https://sibr.gitlabpages.inria.fr) 
-  
-This **SIBR core** repository provides :
-- a basic Image-Based Renderer
-- a per-pixel implementation of Unstructured Lumigraph (ULR)
-- several dataset tools & pipelines do process input images
-  
-Details on how to run in the documentation and in the section below.  
-If you use this code in a publication, please cite the system as follows:
+To replay a previously recorded trace, you can use the command line arguments described above in the [Command Line Arguments](#command-line-arguments) section. Make sure to specify the input trace file and select the appropriate rendering mode.
 
-```
-@misc{sibr2020,
-   author       = "Bonopera, Sebastien and Esnault, Jerome and Prakash, Siddhant and Rodriguez, Simon and Thonat, Theo and Benadel, Mehdi and Chaurasia, Gaurav and Philip, Julien and Drettakis, George",
-   title        = "sibr: A System for Image Based Rendering",
-   year         = "2020",
-   url          = "https://gitlab.inria.fr/sibr/sibr_core"
-}
-```
-## OpenXR
+## Desktop Mode
 
-This branch supports headed-mounted displays through [OpenXR](#use-a-vr-headset). 
-
-
-## Setup
-
-**Note**: The current release is for *Windows 10* only. Please not that Visual Studio with c++20 standard is required to compile. We are planning a Linux release soon.
-
-#### Binary distribution
-
-The easiest way to use SIBR is to download the binary distribution. All steps described below, including all preprocessing for your datasets will work using this code.
-
-Download the distribution from the page: https://sibr.gitlabpages.inria.fr/download.html (Core, 57Mb); unzip the file and rename the directory "install".
-
-#### Install requirements
-
-- [**Visual Studio 2019**](https://visualstudio.microsoft.com/fr/downloads/)
-- [**Cmake 3.16+**](https://cmake.org/download)
-- [**7zip**](https://www.7-zip.org)
-- [**Python 3.8+**](https://www.python.org/downloads/) for shaders installation scripts and dataset preprocess scripts
-- [**Doxygen 1.8.17+**](https://www.doxygen.nl/download.html#srcbin) for documentation
-- [**CUDA 10.1+**](https://developer.nvidia.com/cuda-downloads) and [**CUDnn**](https://developer.nvidia.com/cudnn) if projects requires it
-
-Make sure Python, CUDA and Doxygen are in the PATH
-
-If you have Chocolatey, you can grab most of these with this command:
-
+**Example command for desktop mode replay:**
 ```sh
-choco install cmake 7zip python3 doxygen.install cuda
-
-## Visual Studio is available on Chocolatey,
-## though we do advise to set it from Visual Studio Installer and to choose your licensing accordingly
-choco install visualstudio2019community
+SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train -in C:\User\SIBR\Test\trace.csv --rendering-mode 4 --rendering-size 1200 900
 ```
+If no `--rendering-size` is provided, default is 1200x789.
 
-#### Generation of the solution
+## Headset Mode
 
-- Checkout this repository's master branch:
-  
-  ```sh
-  ## through HTTPS
-  git clone https://gitlab.inria.fr/sibr/sibr_core.git -b master
-  ## through SSH
-  git clone git@gitlab.inria.fr:sibr/sibr_core.git -b master
-  ```
-- Run Cmake-gui once, select the repo root as a source directory, `build/` as the build directory. Configure, select the Visual Studio C++ Win64 compiler
-- Select the projects you want to generate among the BUILD elements in the list (you can group Cmake flags by categories to access those faster)
-- Generate
-
-#### Compilation
-
-- Open the generated Visual Studio solution (`build/sibr_projects.sln`)
-- Build the `ALL_BUILD` target, and then the `INSTALL` target
-- The compiled executables will be put in `install/bin`
-- TODO: are the DLLs properly installed?
-
-#### Compilation of the documentation
-
-- Open the generated Visual Studio solution (`build/sibr_projects.sln`)
-- Build the `DOCUMENTATION` target
-- Run `install/docs/index.html` in a browser
-
-
-## Scripts
-
-Some scripts will require you to install `PIL`, and `convert` from `ImageMagick`.
-
+**Example command for headset mode replay:**
 ```sh
-## To install pillow
-python -m pip install pillow
-
-## If you have Chocolatey, you can install imagemagick from this command
-choco install imagemagick
+SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train -in C:\User\SIBR\Test\output0.csv --rendering-mode 3 --rendering-size 1200 900
 ```
-
-## Troubleshooting
-
-#### Bugs and Issues
-
-We will track bugs and issues through the Issues interface on gitlab. Inria gitlab does not allow creation of external accounts, so if you have an issue/bug please email <code>sibr@inria.fr</code> and we will either create a guest account or create the issue on our side.
-
-#### Cmake complaining about the version
-
-if you are the first to use a very recent Cmake version, you will have to update `CHECKED_VERSION` in the root `CmakeLists.txt`.
-
-#### Weird OpenCV error
-
-you probably selected the 32-bits compiler in Cmake-gui.
-
-#### `Cmd.exe failed with error 009` or similar
-
-make sure Python is installed and in the path. 
-
-#### `BUILD_ALL` or `INSTALL` fail because of a project you don't really need
-
-build and install each project separately by selecting the proper targets.
-
-#### Error in CUDA headers under Visual Studio 2019
-
-make sure CUDA >= 10.1 (first version to support VS2019) is installed.
-
-## To run an example
-
-For more details, please see the documentation: http://sibr.gitlabpages.inria.fr
-
-Download a dataset from: https://repo-sam.inria.fr/fungraph/sibr-datasets/
-
-e.g., the *sibr-museum-front* dataset in the *DATASETS_PATH* directory.
-
-```
-wget https://repo-sam.inria.fr/fungraph/sibr-datasets/museum_front27_ulr.zip
-```
-
-Once you have built the system or downloaded the binaries (see above), go to *install/bin* and you can run:
-```
-	sibr_ulrv2_app.exe --path DATASETS_PATH/sibr-museum-front
-```
-
-You will have an interactive viewer and you can navigate freely in the captured scene. 
-Our default interactive viewer has a main view running the algorithm and a top view to visualize the position of the calibrated cameras. By default you are in WASD mode, and can toggle to trackball using the "y" key. Please see the page [Interface](https://sibr.gitlabpages.inria.fr/docs/nightly/howto_sibr_useful_objects.html) for more details on the interface.
-
-Please see the documentation on how to create a dataset from your own scene, and the various other IBR algorithms available.
-
-### Support for VR headsets using OpenXR (provided by Orange)
-
-
-* The new SIBR rendering mode `OpenXRRdrMode` supports Headed-Mounted dislay (HMD) OpenXR devices.
-* The GaussianViewer can use this rendering mode with `--rendering-mode 2` option to render 3D Gaussian Splatting scene to two-view headset display through OpenXR stack.
-* This mode works on Windows and Linux (through the SteamVR OpenXR runtime).
-
-_Note: `OpenXRRdrMode` does not (yet) support actions (aka controller buttons). But two VR experience modes are available:_
-* Free world standing: only the headset's displacement allows motion within the 3DGS scene
-* Seated: controls with keyboard or mouse are available in addition to headset's displacement
-
----
-**How to test:**
-
-**Windows (Meta Quest 1/2/3/Pro):**
-
-1. Install the Desktop PC Oculus Application: https://www.meta.com/en-gb/help/quest/articles/headsets-and-accessories/oculus-rift-s/install-app-for-link/
-2. Setup Quest Link: https://www.meta.com/en-gb/help/quest/articles/headsets-and-accessories/oculus-link/set-up-link/
-3. The headset should be in the Oculus AirLink Home screen (white background)
-4. Run `gaussianViewer -m <dataset_path> --rendering-mode 2`
-
-![openxr gaussian viewer](./docs/img/openxr_gaussian_viewer.png)
-
-5. You can try `Free world standing` and `Seated` VR experiences
-6. If you are experiencing lags in the headset, try to lower the rendering resolution by changing the `Down scale factor` slider value.
-
-**Linux (through Steam):**
-
-1. Install Steam and SteamVR
-2. Make SteamVR the OpenXR default runtime (Settings > OpenXR > SET STEAMVR AS OPENXR RUNTIME)
-3. Restart SteamVR
-4. Run `gaussianViewer -m <dataset_path> --rendering-mode 2`
-
-Tested with an HTC Vive Pro with `beta - SteamVR Beta Update` on Ubuntu distribution and Meta Quest 2 with `Oculus` on Windows 11.
+If no `--rendering-size` is provided, default size for each eye is 2064x2272.
 

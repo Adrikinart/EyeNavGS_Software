@@ -193,7 +193,7 @@ namespace sibr
                                              << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << "\n";
                                      }
                                      
-                                     if (true)
+                                     if (m_flipY)
                                      {
                                          Eigen::Matrix3f mat;
                                          mat << 1.0f, 0.0f, 0.0f,

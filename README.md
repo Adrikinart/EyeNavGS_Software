@@ -125,10 +125,10 @@ You will see a window with the scene rendered as a 2D view. Interact using your 
 
 **Example command for starting the SIBR viewer in headset mode:**
 ```sh
-SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\truck --rendering-mode 2 --initial-position -2 1.8 -2 --initial-quaternion -0.0872 0.0000 0.0000 0.9962 --initial-scale 0.8
+SIBR_gaussianViewer_app_d.exe -m C:\Users\SIBR\models\train --rendering-mode 2 --initial-position 2 0 3 --initial-quaternion 0.0872 0.0000 0.0000 0.9962 --initial-scale 0.2
 ```
 
-With a supported OpenXR runtime (such as SteamVR on PC or Oculus Link on Windows), you can view and move around in the scene using a VR headset. And you can also see a window with 2 subwindows on the Desktop representing two eyes in the Headset.
+With a supported OpenXR runtime (such as SteamVR on PC or Oculus Link on Windows), you can view and move around in the scene using a VR headset. And you can also see a window with 2 subwindows on the Desktop representing two eyes' views in the Headset.
 
 ![Headset](./docs/img/Headset_mode.png)
 

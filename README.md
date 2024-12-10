@@ -109,6 +109,11 @@ Download example scene models from the provided link and place them in your chos
 | bonsai       |--initial-position  0.7 1 -1 |--initial-quaternion -0.3420 0.0000 0.0000 0.9397|--initial-scale 3     |
 | bicycle      |--initial-position  1 0.9 -2 |--initial-quaternion -0.1305 0.0000 0.0000 0.9914|--initial-scale 0.2   |
 
+> **Note:** 
+>- The values of this table can only be used in Headset Mode.
+>- How to use them? Please read [Headset Mode](#headset-mode-1).
+>- If you **recorded a trace** using specific initial settings, you have to also use the same settings to **replay this trace**. Or you will get output videos in other locations, orientations and scales.
+
 ## Desktop Mode
 
 **Example command for starting the SIBR viewer in desktop mode:**
@@ -125,6 +130,9 @@ You will see a window with the scene rendered as a 2D view. Interact using your 
 
 **Example command for starting the SIBR viewer in headset mode:**
 ```sh
+#Without initial settings
+SIBR_gaussianViewer_app_d.exe -m C:\Users\SIBR\models\train --rendering-mode 2 
+#With initial settings
 SIBR_gaussianViewer_app_d.exe -m C:\Users\SIBR\models\train --rendering-mode 2 --initial-position 2 0 3 --initial-quaternion 0.0872 0.0000 0.0000 0.9962 --initial-scale 0.2
 ```
 
@@ -194,7 +202,10 @@ If no `--rendering-size` is provided, default is 1200x789.
 
 **Example command for headset mode replay:**
 ```sh
+#Without initial settings
 SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train -in C:\User\SIBR\Test\output0.csv --rendering-mode 3 --rendering-size 1200 900
+#With initial settings
+SIBR_gaussianViewer_app_d.exe -m C:\Users\SIBR\models\train --rendering-mode 2 --initial-position 2 0 3 --initial-quaternion 0.0872 0.0000 0.0000 0.9962 --initial-scale 0.2
 ```
 If no `--rendering-size` is provided, default size for each eye is 2064x2272.
 

@@ -15,13 +15,6 @@
    nvcc --version
    cmake --version
    ```
-3. **Download and unzip the dataset:**
-
-   Download the pretrained model data from:
-   ```
-   https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip
-   ```
-   Extract it into a directory of your choice (e.g., `C:\User\SIBR\models`).
 
 
 # Compilation
@@ -33,11 +26,11 @@
 
    - Set the source directory to the repository root and the build directory to `build/`.
 
-        ![openxr gaussian viewer](./docs/img/Cmake-1.png)
+        ![openxr gaussian viewer](./docs/img/cmake-1.png)
 
    - Click "Configure" and select the Visual Studio C++ Win64 compiler.
    - Select the desired BUILD options and then click "Generate".
-        ![openxr gaussian viewer](./docs/img/Cmake-2.png)
+        ![openxr gaussian viewer](./docs/img/cmake-2.png)
 
 
 2. **Compile using Visual Studio:**
@@ -90,8 +83,11 @@ The main arguments include:
 - `--rendering-size <width> <height>`: Sets window size for desktop replay mode.
 
 ## Example Scene Models
-
-Download example scene models from the provided link and place them in your chosen dataset directory. The following table gives some reference values for initialization of the viewer:
+Download the pretrained model data from:
+   ```
+   https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip
+   ```
+Extract it into a directory of your choice (e.g., `C:\User\SIBR\models`). The following table gives some reference values for initialization of the viewer:
 
 | Dataset_Name | Initial Position (x y z)    | Quaternion (X Y Z W)                            | Scale (float)        |
 |--------------|-----------------------------|-------------------------------------------------|----------------------|
@@ -205,7 +201,7 @@ If no `--rendering-size` is provided, default is 1200x789.
 #Without initial settings
 SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train -in C:\User\SIBR\Test\output0.csv --rendering-mode 3 --rendering-size 1200 900
 #With initial settings
-SIBR_gaussianViewer_app_d.exe -m C:\Users\SIBR\models\train --rendering-mode 2 --initial-position 2 0 3 --initial-quaternion 0.0872 0.0000 0.0000 0.9962 --initial-scale 0.2
+SIBR_gaussianViewer_app_d.exe -m C:\Users\SIBR\models\train --rendering-mode 3 --initial-position 2 0 3 --initial-quaternion 0.0872 0.0000 0.0000 0.9962 --initial-scale 0.2
 ```
 If no `--rendering-size` is provided, default size for each eye is 2064x2272.
 

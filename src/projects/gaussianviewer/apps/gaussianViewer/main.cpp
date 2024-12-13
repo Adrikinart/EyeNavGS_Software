@@ -267,7 +267,6 @@ int main(int ac, char** av)
 			break;
 		case 2: {
 			Eigen::Vector4f iq = myArgs.initial_quaternion.get();
-			SIBR_LOG << iq << myArgs.initial_position.get() << '\n';
 			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get());
 			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
 			break;
@@ -278,7 +277,7 @@ int main(int ac, char** av)
 			Eigen::Vector4f iq = myArgs.initial_quaternion.get();
 			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get());
 			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
-			mode->StartReplay(myArgs.Inpath.get());
+			mode->StartRecord(myArgs.Inpath.get());
 			break;
 		}
 		case 4: {//record video in desktop

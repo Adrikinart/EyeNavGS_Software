@@ -50,8 +50,8 @@ namespace sibr
                           sibr::loadFile(sibr::Resources::Instance()->getResourceFilePathName("texture.fp")));
 
         m_openxrHmd = std::make_unique<OpenXRHMD>("Gaussian splatting");
-        m_openxrHmd->init();
         m_openxrHmd->setInitialPose(ipos, iq, scale);
+        m_openxrHmd->init();
         bool sessionCreated = false;
 #if defined(XR_USE_PLATFORM_XLIB)
         sessionCreated = m_openxrHmd->startSession(createXrGraphicsBindingOpenGLXlibKHR(glfwGetX11Display(), glXGetCurrentDrawable(), glfwGetGLXContext(window.GLFW())));
@@ -186,7 +186,7 @@ namespace sibr
                                      
                                     //-----save position and quaternion to file
                                     
-                                     if (PlayMode == 0) {
+                                     if (PlayMode == 0||Rec_Sav) {
                                          outFile << viewIndex << "," // View index
                                              << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
                                              << pos.x() << "," << pos.y() << "," << pos.z() << ","
@@ -270,7 +270,7 @@ namespace sibr
                                          optDest->unbind();
                                      }
 
-                                     if (PlayMode==2) {
+                                     if (PlayMode==2||Rec_Sav) {
                                          glBindTexture(GL_TEXTURE_2D, texture);
 
                                          // create the buffer to store the data
@@ -288,10 +288,8 @@ namespace sibr
                                          // write frame to different video according to the viewIndex(0 is left, 1 is right)
                                          if (viewIndex == 0 && leftEyeVideoWriter.isOpened()) {
                                              leftEyeVideoWriter.write(frame); // left eye
-                                             leftEyeVideoWriter.write(frame); // left eye
                                          }
                                          else if (viewIndex == 1 && rightEyeVideoWriter.isOpened()) {
-                                             rightEyeVideoWriter.write(frame); // right eye
                                              rightEyeVideoWriter.write(frame); // right eye
                                          }
 
@@ -301,7 +299,7 @@ namespace sibr
                                  });
     }
 
-    void OpenXRRdrMode::StartReplay(const std::string& saveFilePath) {
+    void OpenXRRdrMode::StartRecord(const std::string& saveFilePath) {
          
             const int w = m_openxrHmd->getResolution().x();
             const int h = m_openxrHmd->getResolution().y();
@@ -315,7 +313,7 @@ namespace sibr
             leftEyeVideoWriter.open(File+"left.mp4", fourcc, fps, frameSize);
             rightEyeVideoWriter.open(File+"right.mp4", fourcc, fps, frameSize);
 
-            if (true) {
+            if (!Rec_Sav) {
                 if (!inFile.is_open()) {
                     inFile.open(saveFilePath);
                     // Skip the header line
@@ -371,11 +369,27 @@ namespace sibr
             if (outFile.is_open()) {
                 outFile.close();
             }
+            Rec_Sav = false;
             PlayMode = 1;
             SIBR_LOG << "Saving Finished" << std::endl;
             
         }
+        
+        if (ImGui::Button("Recording and Saving") ){
+            StartRecord("output_Rec_");
+            PlayMode = 0;
+            Rec_Sav = true;
+            if (!outFile.is_open()) {
+                const std::string& out = "Output" + std::to_string(FrameIndex++) + ".csv";
+                outFile.open(out, std::ios::app);
+                // Write the CSV header if the file is being created
+                if (outFile.tellp() == 0) {
+                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW\n";
+                }
+            }
 
+            SIBR_LOG << "Start Saving HMD Tracks to output file" << std::endl;
+        }
 
         if (m_openxrHmd->isSessionRunning())
         {

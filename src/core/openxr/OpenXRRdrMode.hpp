@@ -51,6 +51,7 @@ namespace sibr
 
         int PlayMode = 1; //0 is saving Tracks; 1 is Stop Saving(normal play); 2 is Input Replay
 
+        bool Rec_Sav = false;
         void loadViewData(ViewData& view);
 
         /** Perform rendering of a view.
@@ -73,7 +74,7 @@ namespace sibr
         /** \return the right eye RT. */
         virtual const std::unique_ptr<RenderTargetRGB>& rRT() { return _rightRT; }
 
-        void StartReplay(const std::string& saveFilePath);
+        void StartRecord(const std::string& saveFilePath);
 
         /** GUI for configuring OpenXR rendering */
         void onGui();

@@ -89,26 +89,35 @@ Download the pretrained model data from:
    ```
 Extract it into a directory of your choice (e.g., `C:\User\SIBR\models`). The following table gives some reference values for initialization of the viewer:
 
-| Dataset_Name | Initial Position (x y z)    | Quaternion (X Y Z W)                            | Scale (float)        |
-|--------------|-----------------------------|-------------------------------------------------|----------------------|
-| truck        | --initial-position -2 1.8 -4|--initial-quaternion -0.0872 0.0000 0.0000 0.9962|--initial-scale 0.8   |
-| treehill     |--initial-position  2 1 2    |--initial-quaternion -0.2164 0.0000 0.0000 0.9763|--initial-scale 1     |
-| train        |--initial-position  2 0 3    |--initial-quaternion 0.0872 0.0000 0.0000 0.9962 |--initial-scale 0.2   |
-| stump        |--initial-position  -1 1.1 -2|--initial-quaternion -0.4226 0.0000 0.0000 0.9063|--initial-scale 3     |
-| room         |--initial-position  0 1.1 0  |--initial-quaternion -0.2164 0.0000 0.0000 0.9763|--initial-scale 2     |
-| playroom     |--initial-position  0 0.8 0  |--initial-quaternion -0.2164 0.0000 0.0000 0.9763|--initial-scale 2     |
-| kitchen      |--initial-position  0.6 0.7 0|--initial-quaternion -0.3420 0.0000 0.0000 0.9397|--initial-scale 5     |
-| garden       |--initial-position  4 1.7 1  |--initial-quaternion -0.2588 0.0000 0.0000 0.9659|--initial-scale 1     |
-| flowers      |--initial-position  0 0 -2   |--initial-quaternion 0.1305 0.0000 0.0000 0.9914 |--initial-scale 1     |
-| drjohnson    |--initial-position  0 1.5 0  |--initial-quaternion -0.2126 0.2126 0.6744 0.6744|--initial-scale 1     |
-| counter      |--initial-position  0 1 -0.3 |--initial-quaternion -0.3007 0.0000 0.0000 0.9537|--initial-scale 4     |
-| bonsai       |--initial-position  0.7 1 -1 |--initial-quaternion -0.3420 0.0000 0.0000 0.9397|--initial-scale 3     |
-| bicycle      |--initial-position  1 0.9 -2 |--initial-quaternion -0.1305 0.0000 0.0000 0.9914|--initial-scale 0.2   |
+| Dataset_Name | Initial Position (x y z)     | Quaternion (X Y Z W)                             | Scale (float)        |
+|--------------|------------------------------|--------------------------------------------------|----------------------|
+| truck        | --initial-position -2 1.8 -4 |--initial-quaternion -0.0872 0.0000 0.0000 0.9962 |--initial-scale 0.8   |
+| treehill     |--initial-position  2 1 2     |--initial-quaternion -0.2164 0.0000 0.0000 0.9763 |--initial-scale 1     |
+| train        |--initial-position  2 0 3     |--initial-quaternion 0.0872 0.0000 0.0000 0.9962  |--initial-scale 0.2   |
+| stump        |--initial-position  -1 1.1 -2 |--initial-quaternion -0.4226 0.0000 0.0000 0.9063 |--initial-scale 3     |
+| room         |--initial-position  0 1.1 0   |--initial-quaternion -0.2164 0.0000 0.0000 0.9763 |--initial-scale 2     |
+| playroom     |--initial-position  0 0.8 0   |--initial-quaternion -0.2164 0.0000 0.0000 0.9763 |--initial-scale 2     |
+| kitchen      |--initial-position  0.6 0.7 0 |--initial-quaternion -0.3420 0.0000 0.0000 0.9397 |--initial-scale 5     |
+| garden       |--initial-position  4 1.7 1   |--initial-quaternion -0.2588 0.0000 0.0000 0.9659 |--initial-scale 1     |
+| flowers      |--initial-position  0 0 -2    |--initial-quaternion 0.1305 0.0000 0.0000 0.9914  |--initial-scale 1     |
+| drjohnson    |--initial-position  0 1.5 0   |--initial-quaternion -0.2126 0.2126 0.6744 0.6744 |--initial-scale 1     |
+| counter      |--initial-position  0 1 -0.3  |--initial-quaternion -0.3007 0.0000 0.0000 0.9537 |--initial-scale 4     |
+| bonsai       |--initial-position  0.7 1 -1  |--initial-quaternion -0.3420 0.0000 0.0000 0.9397 |--initial-scale 3     |
+| nyc          |--initial-position  3 0 -3    |--initial-quaternion -0.1305 0.0000 0.0000 0.9914 |--initial-scale 0.4   |
+| london       |--initial-position  -8 -2.7 -2|--initial-quaternion -0.0436  0.0000 0.0000 0.9990|--initial-scale 0.4   |
+| berlin       |--initial-position  0 -4 0    |--initial-quaternion 0.04345 0.0038 -0.0870 0.9952|--initial-scale 0.6   |
+| alameda      |--initial-position  -2.5 -1.5 -1.5  |--initial-quaternion -0.1736 0.0000 0.0000 0.9848|--initial-scale 0.4|
 
 > **Note:** 
 >- The values of this table can only be used in Headset Mode.
 >- How to use them? Please read [Headset Mode](#headset-mode-1).
 >- If you **recorded a trace** using specific initial settings, you have to also use the same settings to **replay this trace**. Or you will get output videos in other locations, orientations and scales.
+>- How to modify the values:
+   >- 1. Position: +x: right, +y: up, +z: backward
+   >- 2. Orientation: degrees: +x: downward, +y: right, +z: clockwise (then convert to quaternion)
+   >- 3. Scale: 1 is default value, the higher it is, the smaller the world is.(your body is bigger)
+   >- 4. To be attention, the above parameters control the Initial Position, Initial Orientation and Scale of Headset Space instead of two eyes.
+   >- In Headset space, both eyes are positioned relative to the origin, and the Headset Space itself is placed within the world coordinate system.
 
 ## Desktop Mode
 

@@ -85,7 +85,7 @@ namespace sibr
     }
 
      //Load Trace from CSV file  
-    void OpenXRRdrMode::loadViewData(ViewData& view)
+    void OpenXRRdrMode::loadViewData(ViewData& viewData)
     { 
         //miss the first line header
         std::string header;
@@ -105,19 +105,19 @@ namespace sibr
             // Read FOV
             for (int i = 0; i < 4; ++i) {
                 std::getline(lineStream, token, ',');
-                view.fov(i) = std::stof(token);
+                viewData.fov(i) = std::stof(token);
             }
 
             // Read Position
             for (int i = 0; i < 3; ++i) {
                 std::getline(lineStream, token, ',');
-                view.position(i) = std::stof(token);
+                viewData.position(i) = std::stof(token);
             }
 
             // Read Quaternion
             for (int i = 0; i < 4; ++i) {
                 std::getline(lineStream, token, ',');
-                view.quaternion.coeffs()(i) = std::stof(token);
+                viewData.quaternion.coeffs()(i) = std::stof(token);
             }
         }
         else {
@@ -174,6 +174,7 @@ namespace sibr
                                      ViewData viewData;
                                      if (PlayMode == 2) {
                                          loadViewData(viewData);
+                                         
                                      }
                                      //playMode == 2, Replay; playMode == 0 or 1, HMD controls;
                                      auto fov = PlayMode == 2 ? viewData.fov : this->m_openxrHmd->getFieldOfView(eye);

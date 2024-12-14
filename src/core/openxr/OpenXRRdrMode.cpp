@@ -87,9 +87,6 @@ namespace sibr
      //Load Trace from CSV file  
     void OpenXRRdrMode::loadViewData(ViewData& viewData)
     { 
-        //miss the first line header
-        std::string header;
-        std::getline(inFile, header);
         
         std::string line;
         //get the next line every frame

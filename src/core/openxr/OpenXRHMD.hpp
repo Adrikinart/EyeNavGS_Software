@@ -290,6 +290,9 @@ namespace sibr
             return m_runtimeVersion;
         }
 
+        bool startEyeTracker();
+
+        XrEyeTrackerFB eyeTracker = XR_NULL_HANDLE;
 
         XrPosef initial_adjustment = {
         {0.0f, 0.0f, 0.0f, 1.0f},  // orientation
@@ -297,7 +300,10 @@ namespace sibr
         };
 
         float scale = 1.0;
-        
+        XrSpace gaze_space = XR_NULL_HANDLE;
+
+        XrEyeGazesFB eyeGazes{ XR_TYPE_EYE_GAZES_FB };
+        XrEyeGazesInfoFB gazesInfo{ XR_TYPE_EYE_GAZES_INFO_FB };
     private:
         // Name of the application displayed in the headset
         std::string m_applicationName;

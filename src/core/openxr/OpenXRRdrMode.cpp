@@ -62,7 +62,7 @@ namespace sibr
         {
             SIBR_ERR << "Failed to connect to OpenXR" << std::endl;
         }
-
+        m_openxrHmd->startEyeTracker();
         SIBR_LOG << "Disable VSync: use headset synchronization." << std::endl;
         window.setVsynced(false);
 
@@ -72,7 +72,6 @@ namespace sibr
                                            { m_appFocused = false; });
         m_openxrHmd->setFocusedAppCallback([this]()
                                            { m_appFocused = true; });
-        
         
         
     }
@@ -178,9 +177,12 @@ namespace sibr
                                      auto q = PlayMode == 2 ? viewData.quaternion : this->m_openxrHmd->getPoseQuaternion(eye);
                                      auto pos = PlayMode == 2 ? viewData.position : this->m_openxrHmd->getPosePosition(eye);
 
-                                     // OpenXR eye position is in world coordinates system (+x: right, +y: up; +z: backward)
-                                     // 3DGS reference scenes have the following coordinate system : +x: right, +y: down, +z: forward
-                                     // Let's rotate the camera to have the right-side up scene
+                                     if (!m_openxrHmd->eyeGazes.gaze[viewIndex].isValid) {
+                                         SIBR_LOG<< "Eye Gaze is invalid!\n";
+                                      }
+                                     auto gaze_q = m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.orientation;
+                                     auto gaze_pos = m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.position;
+
                                      
                                     //-----save position and quaternion to file
                                     
@@ -188,9 +190,15 @@ namespace sibr
                                          outFile << viewIndex << "," // View index
                                              << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
                                              << pos.x() << "," << pos.y() << "," << pos.z() << ","
-                                             << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << "\n";
+                                             << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << ","
+                                             << gaze_q.x << "," << gaze_q.y << "," << gaze_q.z << "," << gaze_q.w << ","
+                                             << gaze_pos.x << "," << gaze_pos.y << "," << gaze_pos.z
+                                             << "\n";
                                      }
-                                     
+
+                                     // OpenXR eye position is in world coordinates system (+x: right, +y: up; +z: backward)
+                                     // 3DGS reference scenes have the following coordinate system : +x: right, +y: down, +z: forward
+                                     // Let's rotate the camera to have the right-side up scene
                                      if (m_flipY)
                                      {
                                          Eigen::Matrix3f mat;
@@ -269,6 +277,7 @@ namespace sibr
                                      }
 
                                      if (PlayMode==2||Rec_Sav) {
+
                                          glBindTexture(GL_TEXTURE_2D, texture);
 
                                          // create the buffer to store the data
@@ -354,11 +363,11 @@ namespace sibr
                 outFile.open(out, std::ios::app);
                 // Write the CSV header if the file is being created
                 if (outFile.tellp() == 0) {
-                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW\n";
+                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ\n";
                 }
             }
             
-            SIBR_LOG << "Start Saving HMD Tracks to output file" << std::endl;
+            SIBR_LOG << "Start saving HMD traces to output file" << std::endl;
         }
 
         // Add Stop Saving button
@@ -367,26 +376,33 @@ namespace sibr
             if (outFile.is_open()) {
                 outFile.close();
             }
+
+            if (leftEyeVideoWriter.isOpened()) {
+                leftEyeVideoWriter.release();
+            }
+            if (rightEyeVideoWriter.isOpened()) {
+                rightEyeVideoWriter.release();
+            }
             Rec_Sav = false;
             PlayMode = 1;
             SIBR_LOG << "Saving Finished" << std::endl;
             
         }
-        
+        //Add Recording and Saving button
         if (ImGui::Button("Recording and Saving") ){
-            StartRecord("output_Rec_");
             PlayMode = 0;
             Rec_Sav = true;
+            StartRecord("output_Rec_");
             if (!outFile.is_open()) {
                 const std::string& out = "Output" + std::to_string(FrameIndex++) + ".csv";
                 outFile.open(out, std::ios::app);
                 // Write the CSV header if the file is being created
                 if (outFile.tellp() == 0) {
-                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW\n";
+                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ\n";
                 }
             }
 
-            SIBR_LOG << "Start Saving HMD Tracks to output file" << std::endl;
+            SIBR_LOG << "Start saving HMD traces to output file" << std::endl;
         }
 
         if (m_openxrHmd->isSessionRunning())

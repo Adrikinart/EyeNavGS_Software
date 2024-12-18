@@ -839,6 +839,20 @@ namespace sibr
         if (!xrCheck(m_instance, result, "Could not locate views"))
             return false;
 
+        //update eye gaze information
+        eyeGazes.next = nullptr;
+        gazesInfo.baseSpace = m_playSpace;
+
+        result = xrGetEyeGazesFB_(eyeTracker, &gazesInfo, &eyeGazes);
+        XrEyeGazeFB* G_ptr = eyeGazes.gaze;
+        for (uint32_t i = 0; i < 2; i++) {
+            G_ptr[i].gazePose.position.x = initial_adjustment.position.x + (G_ptr[i].gazePose.position.x - initial_adjustment.position.x) * scale;
+            G_ptr[i].gazePose.position.y = initial_adjustment.position.y + (G_ptr[i].gazePose.position.y - initial_adjustment.position.y) * scale;
+            G_ptr[i].gazePose.position.z = initial_adjustment.position.z + (G_ptr[i].gazePose.position.z - initial_adjustment.position.z) * scale;
+        }
+        if (!xrCheck(m_instance, result, "failed to get eye gaze data!"))
+            return false;
+
         return true;
     }
 
@@ -917,15 +931,6 @@ namespace sibr
         // Render each eye and fill projectionViews with the result
         for (uint32_t i = 0; i < m_viewCount; i++)
         {
-            //update eye gaze information
-            eyeGazes.next = nullptr;
-            gazesInfo.baseSpace = m_playSpace;
-
-            result = xrGetEyeGazesFB_(eyeTracker, &gazesInfo, &eyeGazes);
-            if (!xrCheck(m_instance, result, "failed to get eye gaze data!"))
-                break;
-
-
             XrSwapchainImageAcquireInfo acquire_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO,
                                                         .next = NULL};
             uint32_t acquired_index;

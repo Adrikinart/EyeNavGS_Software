@@ -65,6 +65,18 @@ Headset mode uses OpenXR to stream stereoscopic views to a VR headset. This mode
 
 # Starting the SIBR VR Viewer
 
+## Eye Gaze Tracking Settings
+
+If you use Meta Quest Pro and want to use the Eye gaze tracking funtion, you need to follow these steps for setting up:
+
+1. Download the specific version of Meta Quest Link app: https://www.oculus.com/download_app/?id=1582076955407037
+2. Then you should start with a developer account in the Meta Quest Link and your headset: https://auth.oculus.com/login/?redirect_uri=https%3A%2F%2Fdeveloper.oculus.com%2Fmanage
+3. Creating developer account needs two-step authentication or adding payment.
+4. When you logged in, you should open the developer mode and eye tracking permission. 
+
+   ![quest-link](./docs/img/quest_link_setting.png)
+5. Make sure that you have activated the eye tracking function on the Quest pro headset and calibrated.
+
 ## Command Line Arguments
 
 The main arguments include:

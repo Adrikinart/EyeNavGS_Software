@@ -50,6 +50,7 @@ namespace sibr
                           sibr::loadFile(sibr::Resources::Instance()->getResourceFilePathName("texture.fp")));
 
         m_openxrHmd = std::make_unique<OpenXRHMD>("Gaussian splatting");
+        initial_sacle = scale;
         m_openxrHmd->setInitialPose(ipos, iq, scale);
         m_openxrHmd->init();
         bool sessionCreated = false;

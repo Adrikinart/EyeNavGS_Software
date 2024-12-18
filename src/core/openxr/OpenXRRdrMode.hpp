@@ -74,6 +74,7 @@ namespace sibr
         /** \return the right eye RT. */
         virtual const std::unique_ptr<RenderTargetRGB>& rRT() { return _rightRT; }
 
+        float initial_sacle;
         void StartRecord(const std::string& saveFilePath);
 
         /** GUI for configuring OpenXR rendering */

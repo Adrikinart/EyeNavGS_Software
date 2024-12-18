@@ -83,7 +83,9 @@ The main arguments include:
 - `--rendering-size <width> <height>`: Sets window size for desktop replay mode.
 
 ## Example Scene Models
-Download the pretrained model data from:
+**1. Gaussian Splatting dataset**
+
+Download the following pretrained models from:
    ```
    https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip
    ```
@@ -103,10 +105,22 @@ Extract it into a directory of your choice (e.g., `C:\User\SIBR\models`). The fo
 | drjohnson    |--initial-position  0 1.5 0   |--initial-quaternion -0.2126 0.2126 0.6744 0.6744 |--initial-scale 1     |
 | counter      |--initial-position  0 1 -0.3  |--initial-quaternion -0.3007 0.0000 0.0000 0.9537 |--initial-scale 4     |
 | bonsai       |--initial-position  0.7 1 -1  |--initial-quaternion -0.3420 0.0000 0.0000 0.9397 |--initial-scale 3     |
+
+**2. Zip-NeRF dataset**
+
+Download the models (Zip-NeRF) from:
+```
+https://smerf-3d.github.io/#data
+```
+
+| Dataset_Name | Initial Position (x y z)     | Quaternion (X Y Z W)                             | Scale (float)        |
+|--------------|------------------------------|--------------------------------------------------|----------------------|
 | nyc          |--initial-position  3 0 -3    |--initial-quaternion -0.1305 0.0000 0.0000 0.9914 |--initial-scale 0.4   |
 | london       |--initial-position  -8 -2.7 -2|--initial-quaternion -0.0436  0.0000 0.0000 0.9990|--initial-scale 0.4   |
 | berlin       |--initial-position  0 -4 0    |--initial-quaternion 0.04345 0.0038 -0.0870 0.9952|--initial-scale 0.6   |
 | alameda      |--initial-position  -2.5 -1.5 -1.5  |--initial-quaternion -0.1736 0.0000 0.0000 0.9848|--initial-scale 0.4|
+
+
 
 > **Note:** 
 >- The values of this table can only be used in Headset Mode.

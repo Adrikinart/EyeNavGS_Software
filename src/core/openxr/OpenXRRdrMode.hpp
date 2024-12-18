@@ -75,6 +75,7 @@ namespace sibr
         virtual const std::unique_ptr<RenderTargetRGB>& rRT() { return _rightRT; }
 
         float initial_sacle;
+        bool isEyeTracking = true;
         void StartRecord(const std::string& saveFilePath);
 
         /** GUI for configuring OpenXR rendering */

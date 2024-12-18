@@ -839,7 +839,7 @@ namespace sibr
         if (!xrCheck(m_instance, result, "Could not locate views"))
             return false;
 
-        //update eye gaze information
+        //update eye tracking gaze information
         eyeGazes.next = nullptr;
         gazesInfo.baseSpace = m_playSpace;
 
@@ -850,8 +850,8 @@ namespace sibr
             G_ptr[i].gazePose.position.y = initial_adjustment.position.y + (G_ptr[i].gazePose.position.y - initial_adjustment.position.y) * scale;
             G_ptr[i].gazePose.position.z = initial_adjustment.position.z + (G_ptr[i].gazePose.position.z - initial_adjustment.position.z) * scale;
         }
-        if (!xrCheck(m_instance, result, "failed to get eye gaze data!"))
-            return false;
+       // if (!xrCheck(m_instance, result, "failed to get eye gaze data!"))
+         //   return false;
 
         return true;
     }

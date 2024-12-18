@@ -178,11 +178,14 @@ namespace sibr
                                      auto q = PlayMode == 2 ? viewData.quaternion : this->m_openxrHmd->getPoseQuaternion(eye);
                                      auto pos = PlayMode == 2 ? viewData.position : this->m_openxrHmd->getPosePosition(eye);
 
-                                     if (!m_openxrHmd->eyeGazes.gaze[viewIndex].isValid) {
+                                     if (!m_openxrHmd->eyeGazes.gaze[viewIndex].isValid && isEyeTracking) {
                                          SIBR_LOG<< "Eye Gaze is invalid!\n";
+                                         isEyeTracking = false;
                                       }
-                                     auto gaze_q = m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.orientation;
-                                     auto gaze_pos = m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.position;
+                                     XrQuaternionf unitQ = { 0,0,0,1 };
+                                     XrVector3f unitP = { 0,0,0 };
+                                     auto gaze_q = (isEyeTracking) ? m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.orientation : unitQ;
+                                     auto gaze_pos = (isEyeTracking) ? m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.position : unitP;
 
                                      
                                     //-----save position and quaternion to file

@@ -266,16 +266,24 @@ int main(int ac, char** av)
 			multiViewManager.renderingMode(IRenderingMode::Ptr(new StereoAnaglyphRdrMode()));
 			break;
 		case 2: {
+			std::string vrConfigPath = myArgs.modelPath.get();
+			if (vrConfigPath.back() != '/')
+				vrConfigPath += "/";
+			vrConfigPath += "vr.json";
 			Eigen::Vector4f iq = myArgs.initial_quaternion.get();
-			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get());
+			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get(), vrConfigPath);
 			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
 			break;
 		}
 		case 3: {//record video in headset
+			std::string vrConfigPath = myArgs.modelPath.get();
+			if (vrConfigPath.back() != '/')
+				vrConfigPath += "/";
+			vrConfigPath += "vr.json";
 			if (!myArgs.Inpath.isInit())
 				myArgs.Inpath = myArgs.Inpath.get();
 			Eigen::Vector4f iq = myArgs.initial_quaternion.get();
-			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get());
+			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get(), vrConfigPath);
 			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
 			mode->StartRecord(myArgs.Inpath.get());
 			break;
@@ -285,6 +293,7 @@ int main(int ac, char** av)
 				myArgs.Inpath = myArgs.Inpath.get();
 			camera->LoadPath(myArgs.Inpath.get());
 			multiViewManager.StartRec(myArgs.Inpath.get());
+
 			break;
 		}
 		default:
@@ -322,6 +331,10 @@ int main(int ac, char** av)
 		if (sibr::Input::global().key().isPressed(sibr::Key::Escape)) {
 			window.close();
 		}
+
+		multiViewManager.onUpdate(sibr::Input::global());
+		multiViewManager.onRender(window);
+
 		window.swapBuffer();
 		CHECK_GL_ERROR;
 	}

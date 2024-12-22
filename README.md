@@ -384,9 +384,25 @@ Please see the documentation on how to create a dataset from your own scene, and
 * The GaussianViewer can use this rendering mode with `--rendering-mode 2` option to render 3D Gaussian Splatting scene to two-view headset display through OpenXR stack.
 * This mode works on Windows and Linux (through the SteamVR OpenXR runtime).
 
-_Note: `OpenXRRdrMode` does not (yet) support actions (aka controller buttons). But two VR experience modes are available:_
-* Free world standing: only the headset's displacement allows motion within the 3DGS scene
-* Seated: controls with keyboard or mouse are available in addition to headset's displacement
+Two VR experience modes are available:
+* **Free world standing:** you can walk freely in a rectangular play space
+* **Seated:** you can look around but only move within the space with controllers (the origin is world-locked)
+
+You can enhance your VR experience by defining a starting camera position and re-aligning the scene through the following commands:
+
+|          |         |
+| -------- | ------- |
+| Move the camera | Left controller's stick |
+| Elevate/lower the camera | Left controller's vertical stick (works only on `seated` mode) |
+| Rotate the camera | Right controller's horizontal stick |
+| Move the scene | Drag with the left controller (trigger + move) |
+| Rotate the scene | Drag with the right controller (trigger + rotation) |
+
+Some of those commands are also available through the UI: `OpenXR > Configuration`.
+
+You can also control the controllers's sentivity through the dedicated slider.
+
+Once done, pressing `Save VR configuration` button saves the VR configuration into a `vr.json` file. This configuration will then be automatically loaded on next application startups.
 
 ---
 **How to test:**

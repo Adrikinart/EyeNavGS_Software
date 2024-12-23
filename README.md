@@ -130,7 +130,7 @@ https://rutgers.box.com/s/8ogk91lrrl141pclzoxkii3rh3c7x0pv
    >- 1. Position: +x: right, +y: up, +z: backward
    >- 2. Orientation: degrees: +x: downward, +y: right, +z: clockwise (then convert to quaternion)
    >- 3. Scale: 1 is default value, the higher it is, the smaller the world is.(your body is bigger)
-   >- 4. Notably, the above parameters control the Initial Position, Initial Orientation and Scale of Headset Space instead of two eyes.
+   >- 4. The above parameters control the Initial Position, Initial Orientation and Scale of Headset Space instead of two eyes.
    >- In Headset space, both eyes are positioned relative to the origin, and the Headset Space itself is placed within the world coordinate system.
 
 ## Desktop Mode

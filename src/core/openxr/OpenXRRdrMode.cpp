@@ -79,6 +79,7 @@ namespace sibr
         }
 
         m_openxrHmd = std::make_unique<OpenXRHMD>("Gaussian splatting");
+        initial_sacle = scale;
         m_openxrHmd->setInitialPose(ipos, iq, scale);
         if (!m_openxrHmd->init()) {
             SIBR_ERR << "Failed to connect to OpenXR" << std::endl;
@@ -93,7 +94,7 @@ namespace sibr
         {
             SIBR_ERR << "Failed to connect to OpenXR" << std::endl;
         }
-
+        m_openxrHmd->startEyeTracker();
         SIBR_LOG << "Disable VSync: use headset synchronization." << std::endl;
         window.setVsynced(false);
 
@@ -107,27 +108,29 @@ namespace sibr
         if (m_openxrHmd->input()) {
             // Move camera with left stick
             m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::LEFT, [this](float x, float y) {
-                float step = 0.1f;
-                if (abs(x) > 0.5f) {
-                    m_vrConfig->camera().translate((m_vrConfig->camera().rotation() * m_headCameraInVrWorld.right()) * x * step * m_controlSensitivity);
-                }
+                float step = 0.05f;
+                Eigen::Vector3f forward = currentQ * Eigen::Vector3f(0, 0, -1); //calculate forward based on current Quaternion
+                
                 if (abs(y) > 0.5f) {
-                    m_vrConfig->camera().translate((m_vrConfig->camera().rotation() * m_headCameraInVrWorld.dir()) * y * step * m_controlSensitivity);
+                    Movement += (forward * y * step * m_controlSensitivity);
                 }
             });
             m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::RIGHT, [this](float x, float y) {
-                float step = 0.1f;
-                // Rotate camera with right horizontal stick
+                float step = 0.05f;
+                Eigen::Vector3f right = currentQ * Eigen::Vector3f(1, 0, 0);   //calculate right based on current Quaternion
+
+                // Move camera with right horizontal stick
                 if (abs(x) > 0.5f) {
-                    m_vrConfig->camera().rotate(Quaternionf(Eigen::AngleAxisf(- x * step * m_controlSensitivity, m_vrConfig->camera().up())));
+                    Movement += (right * x * step * m_controlSensitivity);
                 }
                 // Elevate/lower camera with right vertical stick
                 if (abs(y) > 0.5f) {
-                    m_vrConfig->camera().translate((m_vrConfig->camera().rotation() * m_headCameraInVrWorld.up()) * y * step * m_controlSensitivity);
+                    Eigen::Vector3f up = currentQ * Eigen::Vector3f(0, 1, 0); // calculate upward based on current Quaternion
+                    Movement += (up * y * step * m_controlSensitivity);
                 }
             });
             // Move scene with left hand drag (position + trigger)
-            m_openxrHmd->input()->setTriggerCallback(OpenXRInput::Hand::LEFT, [this](float val) {
+           /* m_openxrHmd->input()->setTriggerCallback(OpenXRInput::Hand::LEFT, [this](float val) {
                 const Vector3f& handPose = vrToWorld(m_openxrHmd->input()->getHandPosePosition(OpenXRInput::Hand::LEFT));
                 m_leftTriggerPressed = val > 0.5f;
                 if (m_leftTriggerPressed)
@@ -137,9 +140,9 @@ namespace sibr
                 }
                 m_prevLeftHandPosition = handPose;
 
-            });
+            });*/
             // Rotate scene with right hand drag (orientation + trigger)
-            m_openxrHmd->input()->setTriggerCallback(OpenXRInput::Hand::RIGHT, [this](float val) {
+          /*  m_openxrHmd->input()->setTriggerCallback(OpenXRInput::Hand::RIGHT, [this](float val) {
                 const Quaternionf& handRotation = vrToWorld(m_openxrHmd->input()->getHandPoseOrientation(OpenXRInput::Hand::RIGHT));
                 m_rightTriggerPressed = val > 0.5f;
                 if (m_rightTriggerPressed)
@@ -148,7 +151,7 @@ namespace sibr
                     m_vrConfig->sceneTransform().rotate(diff.inverse());
                 }
                 m_prevRightHandOrientation = handRotation;
-            });
+            });*/
         }
     }
 
@@ -256,19 +259,34 @@ namespace sibr
                                      auto q = PlayMode == 2 ? viewData.quaternion : this->m_openxrHmd->getPoseQuaternion(eye);
                                      auto pos = PlayMode == 2 ? viewData.position : this->m_openxrHmd->getPosePosition(eye);
 
-                                     // OpenXR eye position is in world coordinates system (+x: right, +y: up; +z: backward)
-                                     // 3DGS reference scenes have the following coordinate system : +x: right, +y: down, +z: forward
-                                     // Let's rotate the camera to have the right-side up scene
-                                     
+                                     if (!m_openxrHmd->eyeGazes.gaze[viewIndex].isValid && isEyeTracking) {
+                                         SIBR_LOG<< "Eye Gaze is invalid!\n";
+                                         isEyeTracking = false;
+                                      }
+                                     XrQuaternionf unitQ = { 0,0,0,1 };
+                                     XrVector3f unitP = { 0,0,0 };
+                                     auto gaze_q = (isEyeTracking) ? m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.orientation : unitQ;
+                                     auto gaze_pos = (isEyeTracking) ? m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.position : unitP;
+                                     currentQ = q;
+                                     pos += Movement;
+                                     gaze_pos.x += Movement.x();
+                                     gaze_pos.y += Movement.y();
+                                     gaze_pos.z += Movement.z();
                                     //-----save position and quaternion to file
                                     
                                      if (PlayMode == 0||Rec_Sav) {
                                          outFile << viewIndex << "," // View index
                                              << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
                                              << pos.x() << "," << pos.y() << "," << pos.z() << ","
-                                             << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << "\n";
+                                             << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << ","
+                                             << gaze_q.x << "," << gaze_q.y << "," << gaze_q.z << "," << gaze_q.w << ","
+                                             << gaze_pos.x << "," << gaze_pos.y << "," << gaze_pos.z
+                                             << "\n";
                                      }
-                                     
+
+                                     // OpenXR eye position is in world coordinates system (+x: right, +y: up; +z: backward)
+                                     // 3DGS reference scenes have the following coordinate system : +x: right, +y: down, +z: forward
+                                     // Let's rotate the camera to have the right-side up scene
                                      if (m_flipY)
                                      {
                                          Eigen::Matrix3f mat;
@@ -309,25 +327,12 @@ namespace sibr
                                      {
                                          return;
                                      }
-
-                                     // Compute eye with the parallax shift and asymetric fov
-                                     cam = computeEyeCam(m_headCamera, eye);
-
-                                     // Perform the scene rendering for the given view into the RenderTarget's FBO
                                      rt->clear();
                                      rt->bind();
                                      glViewport(0, 0, w, h);
                                      view.onRenderIBR(*rt.get(), cam);
                                      rt->unbind();
-
-                                     // Render the VR play space to help configuring the scene position and orientation
-                                     if (m_forceRenderVRPlaySpace || m_leftTriggerPressed || m_rightTriggerPressed)
-                                     {
-                                        rt->bind();
-                                        glViewport(0, 0, w, h);
-                                        renderVRPlaySpace(eye);
-                                        rt->unbind();
-                                     }
+                                     
 
                                      // Draw the left and right textures into the UI window
                                      if (optDest)
@@ -359,6 +364,7 @@ namespace sibr
                                      }
 
                                      if (PlayMode==2||Rec_Sav) {
+
                                          glBindTexture(GL_TEXTURE_2D, texture);
 
                                          // create the buffer to store the data
@@ -444,11 +450,11 @@ namespace sibr
                 outFile.open(out, std::ios::app);
                 // Write the CSV header if the file is being created
                 if (outFile.tellp() == 0) {
-                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW\n";
+                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ\n";
                 }
             }
             
-            SIBR_LOG << "Start Saving HMD Tracks to output file" << std::endl;
+            SIBR_LOG << "Start saving HMD traces to output file" << std::endl;
         }
 
         // Add Stop Saving button
@@ -457,26 +463,33 @@ namespace sibr
             if (outFile.is_open()) {
                 outFile.close();
             }
+
+            if (leftEyeVideoWriter.isOpened()) {
+                leftEyeVideoWriter.release();
+            }
+            if (rightEyeVideoWriter.isOpened()) {
+                rightEyeVideoWriter.release();
+            }
             Rec_Sav = false;
             PlayMode = 1;
             SIBR_LOG << "Saving Finished" << std::endl;
             
         }
-        
+        //Add Recording and Saving button
         if (ImGui::Button("Recording and Saving") ){
-            StartRecord("output_Rec_");
             PlayMode = 0;
             Rec_Sav = true;
+            StartRecord("output_Rec_");
             if (!outFile.is_open()) {
                 const std::string& out = "Output" + std::to_string(FrameIndex++) + ".csv";
                 outFile.open(out, std::ios::app);
                 // Write the CSV header if the file is being created
                 if (outFile.tellp() == 0) {
-                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW\n";
+                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ\n";
                 }
             }
 
-            SIBR_LOG << "Start Saving HMD Tracks to output file" << std::endl;
+            SIBR_LOG << "Start saving HMD traces to output file" << std::endl;
         }
 
         if (m_openxrHmd->isSessionRunning())

@@ -65,6 +65,17 @@ Headset mode uses OpenXR to stream stereoscopic views to a VR headset. This mode
 
 # Starting the SIBR VR Viewer
 
+## Eye Gaze Tracking Settings
+
+If you use Meta Quest Pro and want to use the Eye gaze tracking funtion, you need to follow these steps for setting up:
+
+1. Download the specific version of Meta Quest Link app: https://www.oculus.com/download_app/?id=1582076955407037
+2. Then you should start with a developer account in the Meta Quest Link and your headset: https://auth.oculus.com/login/?redirect_uri=https%3A%2F%2Fdeveloper.oculus.com%2Fmanage (Creating developer account needs two-step authentication or adding payment.)
+4. When you logged in, you should open the developer mode and eye tracking permission. 
+
+   ![quest-link](./docs/img/quest_link_setting.png)
+5. Make sure that you have activated the eye tracking function on the Quest pro headset and calibrated.
+
 ## Command Line Arguments
 
 The main arguments include:
@@ -108,7 +119,7 @@ Extract it into a directory of your choice (e.g., `C:\User\SIBR\models`). The fo
 
 **2. Zip-NeRF dataset**
 
-Download the models (Zip-NeRF) from:
+Download the models (Zip-NeRF) from: 
 ```
 https://rutgers.box.com/s/8ogk91lrrl141pclzoxkii3rh3c7x0pv
 ```
@@ -122,7 +133,7 @@ https://rutgers.box.com/s/8ogk91lrrl141pclzoxkii3rh3c7x0pv
 
 
 
-> **Note:** 
+> **Note** 
 >- The values of this table can only be used in Headset Mode.
 >- How to use them? Please read [Headset Mode](#headset-mode-1).
 >- If you **recorded a trace** using specific initial settings, you have to also use the same settings to **replay this trace**. Or you will get output videos in other locations, orientations and scales.
@@ -159,6 +170,13 @@ With a supported OpenXR runtime (such as SteamVR on PC or Oculus Link on Windows
 
 ![Headset](./docs/img/Headset_mode.png)
 
+## Movement using controllers in Headset Mode
+|     Function     |     Operation    |
+| -------- | ------- |
+| Move the camera  forward/backward | Left controller's vertical stick (Up: ↑ and Down: ↓) |
+| Move the camera  left/right | Right controller's horizontal stick (Left: ← and Right: →) |
+| Elevate/lower the camera | Right controller's vertical stick (Up: ↑ and Down: ↓) |
+
 # Trace Recording
 
 You can record the camera’s movement trajectory (position), field-of-view (FOV), and orientation (quaternion) for future replay.
@@ -188,14 +206,29 @@ You can record the camera’s movement trajectory (position), field-of-view (FOV
 
 The recorded traces are stored in `.csv` files. Each row corresponds to a captured frame/state of the viewer.
 
-| ViewIndex |   FOV1    |   FOV2    |   FOV3    |   FOV4    | PositionX  | PositionY  | PositionZ  | QuaternionX | QuaternionY | QuaternionZ | QuaternionW |
-|-----------|-----------:|----------:|----------:|----------:|-----------:|-----------:|-----------:|------------:|------------:|------------:|------------:|
-| 0         | -0.94248   | 0.698132  | -0.95993  | 0.767945  | 0.003914   | 0.895811   | -0.07397   | 0.257321    | -0.107277   | -0.030081   | 0.959882    |
-| 1         | -0.69813   | 0.942478  | -0.95993  | 0.767945  | 0.065237   | 0.888708   | -0.06199   | 0.257321    | -0.107277   | -0.030081   | 0.959882    |
-| 0         | -0.94248   | 0.698132  | -0.95993  | 0.767945  | 0.002297   | 0.89517    | -0.0753    | 0.254336    | -0.107171   | -0.0282334  | 0.960745    |
-| 1         | -0.69813   | 0.942478  | -0.95993  | 0.767945  | 0.063636   | 0.88833    | -0.06326   | 0.254336    | -0.107171   | -0.0282334  | 0.960745    |
-| 0         | -0.94248   | 0.698132  | -0.95993  | 0.767945  | 0.002278   | 0.895369   | -0.07456   | 0.254109    | -0.108516   | -0.0283014  | 0.960652    |
-| 1         | -0.69813   | 0.942478  | -0.95993  | 0.767945  | 0.06358    | 0.888482   | -0.06235   | 0.254109    | -0.108516   | -0.0283014  | 0.960652    |
+**With Eye Tracking:** 
+|ViewIndex|FOV1      |FOV2       |FOV3       |FOV4       |PositionX  |PositionY  |PositionZ |QuaternionX |QuaternionY |QuaternionZ |QuaternionW |GazeQX |GazeQY |GazeQZ |GazeQW |GazePosX| GazePosY |GazePosZ|
+|--------|-----------|-----------|-----------|-----------|-----------|-----------|-----------|------------|----------|--------|----------|----------|-----------|---------|----------|-----------|-----------|-------|
+|0       |-0.942478  |0.698132   |-0.942478  |0.733038   |-3.66908   |-3.65709   |4.65788    |0.494687    |0.294258    |0.123821  | 0.80831   |0.250753 |0.0845578 |0.0237413 |0.964059 |-3.66845 |-3.65671 |4.657   |
+|1       |-0.698132  |0.942478   |-0.942478  |0.733038   |-3.51258   |-3.56052   |4.58845    |0.494687    |0.294258    |0.123821  | 0.80831   |0.245048 |0.103784  |0.0453922 |0.962871 |-3.5132  |-3.5609  |4.58873 |
+|0       |-0.942478  |0.698132   |-0.942478  |0.733038   |-3.66901   |-3.65635   |4.65733    |0.494082    |0.293893    |0.12298   | 0.808941  |0.248543 |0.0871354 |0.0263629 |0.964333 |-3.66845 |-3.65617 |4.65724 |
+|1       |-0.698132  |0.942478   |-0.942478  |0.733038   |-3.51234   |-3.56015   |4.58775    |0.494082    |0.293893    |0.12298   | 0.808941  |0.242903 |0.10644   |0.0481759 |0.962989 |-3.51307 |-3.56065 |4.58826 |
+|0       |-0.942478  |0.698132   |-0.942478  |0.733038   |-3.66822   |-3.65448   |4.65532    |0.493222    |0.292894    |0.121582  | 0.810039  |0.250637 |0.0804785 |0.0186323 |0.96455  |-3.66818 |-3.65542 |4.65656 |
+|1       |-0.698132  |0.942478   |-0.942478  |0.733038   |-3.51119   |-3.55897   |4.58562    |0.493222    |0.292894    |0.121582  | 0.810039  |0.244869 |0.0996684 |0.0400738 |0.963587 |-3.51267 |-3.56017 |4.5875  |
+
+
+**Without Eye Tracking:** 
+
+When recording traces by Headset which doesn't support Eye Tracking. The table will show the Default Gaze Quaternion (0, 0, 0, 1) and Default Gaze Position (0, 0, 0).
+| ViewIndex | FOV1       | FOV2      | FOV3      | FOV4      | PositionX | PositionY | PositionZ | QuaternionX | QuaternionY | QuaternionZ | QuaternionW | GazeQX | GazeQY | GazeQZ | GazeQW | GazePosX | GazePosY | GazePosZ |
+|-----------|------------|-----------|-----------|-----------|-----------|-----------|-----------|-------------|-------------|-------------|-------------|--------|--------|--------|--------|----------|----------|----------|
+| 0         | -0.942478  | 0.698132  | -0.959931 | 0.767945  | -3.73939  | -2.87605  | 3.84698   | -0.553023   | -0.190208   | -0.0679262  | -0.808315   | 0      | 0      | 0      | 1      | 0        | 0        | 0        |
+| 1         | -0.698132  | 0.942478  | -0.959931 | 0.767945  | -3.5607   | -2.81376  | 3.80177   | -0.553023   | -0.190208   | -0.0679262  | -0.808315   | 0      | 0      | 0      | 1      | 0        | 0        | 0        |
+| 0         | -0.942478  | 0.698132  | -0.959931 | 0.767945  | -3.73953  | -2.87595  | 3.8469    | -0.55294    | -0.190346   | -0.0677738  | -0.808352   | 0      | 0      | 0      | 1      | 0        | 0        | 0        |
+| 1         | -0.698132  | 0.942478  | -0.959931 | 0.767945  | -3.56086  | -2.81368  | 3.80161   | -0.55294    | -0.190346   | -0.0677738  | -0.808352   | 0      | 0      | 0      | 1      | 0        | 0        | 0        |
+| 0         | -0.942478  | 0.698132  | -0.959931 | 0.767945  | -3.73972  | -2.87588  | 3.84681   | -0.552844   | -0.190463   | -0.0677066  | -0.808395   | 0      | 0      | 0      | 1      | 0        | 0        | 0        |
+| 1         | -0.698132  | 0.942478  | -0.959931 | 0.767945  | -3.56107  | -2.81361  | 3.80147   | -0.552844   | -0.190463   | -0.0677066  | -0.808395   | 0      | 0      | 0      | 1      | 0        | 0        | 0        |
+
 * ViewIndex: Index used to identify left eye or right eye, 0 is left, 1 is right.  
 * FOV1: The left field of view angle.  
 * FOV2: The right field of view angle.  
@@ -203,7 +236,8 @@ The recorded traces are stored in `.csv` files. Each row corresponds to a captur
 * FOV4: The bottom field of view angle.  
 * PositionX,Y,Z: The camera's position coordinates in 3D space, defining where the camera is located.  
 * QuaternionX,Y,Z,W: Defines the camera's rotation as a quaternion, which represents 3D rotations without the risk of gimbal lock.
-
+* GazeQX,Y,Z,W: Defines the rotation of eyes in Eye Gaze tracking
+* GazePosX,Y,Z: The eyes' position coordinates in 3D space, defining where the eyes is looking at.
 
 # Trace Replay
 
@@ -369,7 +403,7 @@ wget https://repo-sam.inria.fr/fungraph/sibr-datasets/museum_front27_ulr.zip
 
 Once you have built the system or downloaded the binaries (see above), go to *install/bin* and you can run:
 ```
-	sibr_ulrv2_app.exe --path DATASETS_PATH/sibr-museum-front
+ sibr_ulrv2_app.exe --path DATASETS_PATH/sibr-museum-front
 ```
 
 You will have an interactive viewer and you can navigate freely in the captured scene. 

@@ -34,6 +34,7 @@ namespace sibr
     static PFN_xrConvertWin32PerformanceCounterToTimeKHR pfnConvertWin32PerformanceCounterToTimeKHR = NULL;
 #endif
 
+    bool eyetracking_supported = false;
     static bool
     load_extension_function_pointers(XrInstance instance)
     {
@@ -42,26 +43,26 @@ namespace sibr
                                   (PFN_xrVoidFunction *)&pfnGetOpenGLGraphicsRequirementsKHR);
         if (!xrCheck(instance, result, "Failed to get OpenGL graphics requirements function!"))
             return false;
+        if (eyetracking_supported) {
+            result =
+                xrGetInstanceProcAddr(
+                    instance, "xrCreateEyeTrackerFB", (PFN_xrVoidFunction*)(&xrCreateEyeTrackerFB_));
+            if (!xrCheck(instance, result, "Failed to get eye tracker create function!"))
+                return false;
 
-        result =
-            xrGetInstanceProcAddr(
-                instance, "xrCreateEyeTrackerFB", (PFN_xrVoidFunction*)(&xrCreateEyeTrackerFB_));
-        if (!xrCheck(instance, result, "Failed to get eye tracker create function!"))
-            return false;
+            result = xrGetInstanceProcAddr(
+                instance,
+                "xrDestroyEyeTrackerFB",
+                (PFN_xrVoidFunction*)(&xrDestroyEyeTrackerFB_));
+            if (!xrCheck(instance, result, "Failed to get eye tracker destroy function!"))
+                return false;
 
-        result = xrGetInstanceProcAddr(
-            instance,
-            "xrDestroyEyeTrackerFB",
-            (PFN_xrVoidFunction*)(&xrDestroyEyeTrackerFB_));
-        if (!xrCheck(instance, result, "Failed to get eye tracker destroy function!"))
-            return false;
-
-        result = xrGetInstanceProcAddr(
-            instance, "xrGetEyeGazesFB", (PFN_xrVoidFunction*)(&xrGetEyeGazesFB_));
-        if (!xrCheck(instance, result, "Failed to get eye gazes get function!"))
-            return false;
-
-
+            result = xrGetInstanceProcAddr(
+                instance, "xrGetEyeGazesFB", (PFN_xrVoidFunction*)(&xrGetEyeGazesFB_));
+            if (!xrCheck(instance, result, "Failed to get eye gazes get function!"))
+                return false;
+        }
+        
 #if defined(XR_USE_TIMESPEC)
         result =
             xrGetInstanceProcAddr(instance, "xrConvertTimespecTimeToTimeKHR",
@@ -114,7 +115,8 @@ namespace sibr
 
     OpenXRHMD::~OpenXRHMD()
     {
-        xrDestroyEyeTrackerFB_(eyeTracker);
+        if (eyetracking_supported)
+            xrDestroyEyeTrackerFB_(eyeTracker);
         closeSession();
         terminate();
     }
@@ -318,7 +320,15 @@ namespace sibr
             XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME,
 #endif
         };
-
+        std::vector<const char*> expectedExtensions_0 = {
+            XR_KHR_OPENGL_ENABLE_EXTENSION_NAME,
+#if defined(XR_USE_PLATFORM_WIN32)
+            XR_KHR_WIN32_CONVERT_PERFORMANCE_COUNTER_TIME_EXTENSION_NAME,
+#elif defined(XR_USE_TIMESPEC)
+            XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME,
+#endif
+        };
+        
         result = xrEnumerateInstanceExtensionProperties(NULL, ext_count, &ext_count, ext_props);
         if (!xrCheck(NULL, result, "Failed to enumerate extension properties"))
             return false;
@@ -335,6 +345,8 @@ namespace sibr
             {
                 opengl_supported = true;
             }
+            if (strcmp(XR_FB_EYE_TRACKING_SOCIAL_EXTENSION_NAME, ext_props[i].extensionName) == 0)
+                eyetracking_supported = true;
         }
         free(ext_props);
 
@@ -366,15 +378,25 @@ namespace sibr
         instanceCreateInfo.applicationInfo = applicationInfo;
         instanceCreateInfo.enabledApiLayerCount = 0;
         instanceCreateInfo.enabledApiLayerNames = NULL;
-        instanceCreateInfo.enabledExtensionCount = (uint32_t)expectedExtensions.size();
-        instanceCreateInfo.enabledExtensionNames = expectedExtensions.data();
+
+        if (eyetracking_supported) {
+            instanceCreateInfo.enabledExtensionCount = (uint32_t)expectedExtensions.size();
+            instanceCreateInfo.enabledExtensionNames = expectedExtensions.data();
+        }
+        else {
+            SIBR_LOG << "Eyetracking is not supported by current device!\n";
+            instanceCreateInfo.enabledExtensionCount = (uint32_t)expectedExtensions_0.size();
+            instanceCreateInfo.enabledExtensionNames = expectedExtensions_0.data();
+        }
+
         stringCopy(instanceCreateInfo.applicationInfo.applicationName, m_applicationName.c_str(),
             XR_MAX_APPLICATION_NAME_SIZE);
         stringCopy(instanceCreateInfo.applicationInfo.engineName, "SIBR_core", XR_MAX_ENGINE_NAME_SIZE);
 
         result = xrCreateInstance(&instanceCreateInfo, &m_instance);
-        if (!xrCheck(NULL, result, "Failed to create XR m_instance."))
+        if (!xrCheck(NULL, result, "Failed to create XR m_instance.")) 
             return false;
+        
 
 
         if (!load_extension_function_pointers(m_instance))
@@ -796,7 +818,7 @@ namespace sibr
                 m_sessionBeginInfo.next = NULL;
                 m_sessionBeginInfo.primaryViewConfigurationType = m_viewType;
                 XrResult result = xrBeginSession(m_session, &m_sessionBeginInfo);
-                if (!xrCheck(m_instance, result, "Failed to begin ession!"))
+                if (!xrCheck(m_instance, result, "Failed to begin session!"))
                 {
                     m_status = SessionStatus::FAILURE;
                     return;
@@ -888,20 +910,22 @@ namespace sibr
         }
         if (!xrCheck(m_instance, result, "Could not locate views"))
             return false;
+        if (eyetracking_supported) {
+            //update eye tracking gaze information
+            eyeGazes.next = nullptr;
+            gazesInfo.baseSpace = m_playSpace;
 
-        //update eye tracking gaze information
-        eyeGazes.next = nullptr;
-        gazesInfo.baseSpace = m_playSpace;
-
-        result = xrGetEyeGazesFB_(eyeTracker, &gazesInfo, &eyeGazes);
-        XrEyeGazeFB* G_ptr = eyeGazes.gaze;
-        for (uint32_t i = 0; i < 2; i++) {
-            G_ptr[i].gazePose.position.x = initial_adjustment.position.x + (G_ptr[i].gazePose.position.x - initial_adjustment.position.x) * scale;
-            G_ptr[i].gazePose.position.y = initial_adjustment.position.y + (G_ptr[i].gazePose.position.y - initial_adjustment.position.y) * scale;
-            G_ptr[i].gazePose.position.z = initial_adjustment.position.z + (G_ptr[i].gazePose.position.z - initial_adjustment.position.z) * scale;
+            result = xrGetEyeGazesFB_(eyeTracker, &gazesInfo, &eyeGazes);
+            XrEyeGazeFB* G_ptr = eyeGazes.gaze;
+            for (uint32_t i = 0; i < 2; i++) {
+                G_ptr[i].gazePose.position.x = initial_adjustment.position.x + (G_ptr[i].gazePose.position.x - initial_adjustment.position.x) * scale;
+                G_ptr[i].gazePose.position.y = initial_adjustment.position.y + (G_ptr[i].gazePose.position.y - initial_adjustment.position.y) * scale;
+                G_ptr[i].gazePose.position.z = initial_adjustment.position.z + (G_ptr[i].gazePose.position.z - initial_adjustment.position.z) * scale;
+            }
+            // if (!xrCheck(m_instance, result, "failed to get eye gaze data!"))
+              //   return false;
         }
-       // if (!xrCheck(m_instance, result, "failed to get eye gaze data!"))
-         //   return false;
+        
 
         if(!m_xrInput->sync(m_lastFrameState.predictedDisplayTime)) {
             return false;
@@ -1178,10 +1202,12 @@ namespace sibr
 
     bool OpenXRHMD::startEyeTracker()
     {
-        XrEyeTrackerCreateInfoFB createInfo{ .type = XR_TYPE_EYE_TRACKER_CREATE_INFO_FB };
-        XrResult result = xrCreateEyeTrackerFB_(m_session, &createInfo, &eyeTracker);
-        if (!xrCheck(m_instance, result, "Failed to create eyeTracker\n"))
-            return false;
+        if (eyetracking_supported) {
+            XrEyeTrackerCreateInfoFB createInfo{ .type = XR_TYPE_EYE_TRACKER_CREATE_INFO_FB };
+            XrResult result = xrCreateEyeTrackerFB_(m_session, &createInfo, &eyeTracker);
+            if (!xrCheck(m_instance, result, "Failed to create eyeTracker\n"))
+                return false;
+        }
         return true;
     }
 

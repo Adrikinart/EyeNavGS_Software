@@ -339,7 +339,6 @@ namespace sibr
 
         float scale = 1.0;
         XrSpace gaze_space = XR_NULL_HANDLE;
-
         XrEyeGazesFB eyeGazes{ XR_TYPE_EYE_GAZES_FB };
         XrEyeGazesInfoFB gazesInfo{ XR_TYPE_EYE_GAZES_INFO_FB };
     private:

@@ -110,17 +110,19 @@ namespace sibr
             m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::LEFT, [this](float x, float y) {
                 float step = 0.05f;
                 Eigen::Vector3f forward = currentQ * Eigen::Vector3f(0, 0, -1); //calculate forward based on current Quaternion
-                Eigen::Vector3f right = currentQ * Eigen::Vector3f(1, 0, 0);   //calculate right based on current Quaternion
-                if (abs(x) > 0.5f) {
-                    Movement += (right * x * step * m_controlSensitivity);
-                }
+                
                 if (abs(y) > 0.5f) {
                     Movement += (forward * y * step * m_controlSensitivity);
                 }
             });
             m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::RIGHT, [this](float x, float y) {
                 float step = 0.05f;
-                
+                Eigen::Vector3f right = currentQ * Eigen::Vector3f(1, 0, 0);   //calculate right based on current Quaternion
+
+                // Move camera with right horizontal stick
+                if (abs(x) > 0.5f) {
+                    Movement += (right * x * step * m_controlSensitivity);
+                }
                 // Elevate/lower camera with right vertical stick
                 if (abs(y) > 0.5f) {
                     Eigen::Vector3f up = currentQ * Eigen::Vector3f(0, 1, 0); // calculate upward based on current Quaternion
@@ -128,7 +130,7 @@ namespace sibr
                 }
             });
             // Move scene with left hand drag (position + trigger)
-            m_openxrHmd->input()->setTriggerCallback(OpenXRInput::Hand::LEFT, [this](float val) {
+           /* m_openxrHmd->input()->setTriggerCallback(OpenXRInput::Hand::LEFT, [this](float val) {
                 const Vector3f& handPose = vrToWorld(m_openxrHmd->input()->getHandPosePosition(OpenXRInput::Hand::LEFT));
                 m_leftTriggerPressed = val > 0.5f;
                 if (m_leftTriggerPressed)
@@ -138,9 +140,9 @@ namespace sibr
                 }
                 m_prevLeftHandPosition = handPose;
 
-            });
+            });*/
             // Rotate scene with right hand drag (orientation + trigger)
-            m_openxrHmd->input()->setTriggerCallback(OpenXRInput::Hand::RIGHT, [this](float val) {
+          /*  m_openxrHmd->input()->setTriggerCallback(OpenXRInput::Hand::RIGHT, [this](float val) {
                 const Quaternionf& handRotation = vrToWorld(m_openxrHmd->input()->getHandPoseOrientation(OpenXRInput::Hand::RIGHT));
                 m_rightTriggerPressed = val > 0.5f;
                 if (m_rightTriggerPressed)
@@ -149,7 +151,7 @@ namespace sibr
                     m_vrConfig->sceneTransform().rotate(diff.inverse());
                 }
                 m_prevRightHandOrientation = handRotation;
-            });
+            });*/
         }
     }
 

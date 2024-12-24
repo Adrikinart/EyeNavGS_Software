@@ -170,6 +170,13 @@ With a supported OpenXR runtime (such as SteamVR on PC or Oculus Link on Windows
 
 ![Headset](./docs/img/Headset_mode.png)
 
+## Movement using controllers in Headset Mode
+|     Function     |     Operation    |
+| -------- | ------- |
+| Move the camera  forward/backward | Left controller's vertical stick (Up: ↑ and Down: ↓) |
+| Move the camera  left/right | Right controller's horizontal stick (Left: ← and Right: →) |
+| Elevate/lower the camera | Right controller's vertical stick (Up: ↑ and Down: ↓) |
+
 # Trace Recording
 
 You can record the camera’s movement trajectory (position), field-of-view (FOV), and orientation (quaternion) for future replay.

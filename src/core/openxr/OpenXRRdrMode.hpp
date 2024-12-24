@@ -86,6 +86,8 @@ namespace sibr
             1.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f,
             0.0f, 0.0f, 1.0f).finished();*/
+        Eigen::Quaternionf currentQ = { 0.f,0.f,0.f,1.0f };// Used for recording current rotation
+        Eigen::Vector3f Movement = Eigen::Vector3f::Zero();         // Used for controling movement
     private:
         std::unique_ptr<OpenXRHMD> m_openxrHmd;                  ///< OpenXR interface
         std::unique_ptr<VRConfiguration> m_vrConfig;             ///< Configuration for VR experience (initial camera pose and world transform)

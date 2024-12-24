@@ -108,23 +108,23 @@ namespace sibr
         if (m_openxrHmd->input()) {
             // Move camera with left stick
             m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::LEFT, [this](float x, float y) {
-                float step = 0.1f;
+                float step = 0.05f;
+                Eigen::Vector3f forward = currentQ * Eigen::Vector3f(0, 0, -1); //calculate forward based on current Quaternion
+                Eigen::Vector3f right = currentQ * Eigen::Vector3f(1, 0, 0);   //calculate right based on current Quaternion
                 if (abs(x) > 0.5f) {
-                    m_vrConfig->camera().translate((m_vrConfig->camera().rotation() * m_headCameraInVrWorld.right()) * x * step * m_controlSensitivity);
+                    Movement += (right * x * step * m_controlSensitivity);
                 }
                 if (abs(y) > 0.5f) {
-                    m_vrConfig->camera().translate((m_vrConfig->camera().rotation() * m_headCameraInVrWorld.dir()) * y * step * m_controlSensitivity);
+                    Movement += (forward * y * step * m_controlSensitivity);
                 }
             });
             m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::RIGHT, [this](float x, float y) {
-                float step = 0.1f;
-                // Rotate camera with right horizontal stick
-                if (abs(x) > 0.5f) {
-                    m_vrConfig->camera().rotate(Quaternionf(Eigen::AngleAxisf(- x * step * m_controlSensitivity, m_vrConfig->camera().up())));
-                }
+                float step = 0.05f;
+                
                 // Elevate/lower camera with right vertical stick
                 if (abs(y) > 0.5f) {
-                    m_vrConfig->camera().translate((m_vrConfig->camera().rotation() * m_headCameraInVrWorld.up()) * y * step * m_controlSensitivity);
+                    Eigen::Vector3f up = currentQ * Eigen::Vector3f(0, 1, 0); // calculate upward based on current Quaternion
+                    Movement += (up * y * step * m_controlSensitivity);
                 }
             });
             // Move scene with left hand drag (position + trigger)
@@ -265,8 +265,11 @@ namespace sibr
                                      XrVector3f unitP = { 0,0,0 };
                                      auto gaze_q = (isEyeTracking) ? m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.orientation : unitQ;
                                      auto gaze_pos = (isEyeTracking) ? m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.position : unitP;
-
-                                     
+                                     currentQ = q;
+                                     pos += Movement;
+                                     gaze_pos.x += Movement.x();
+                                     gaze_pos.y += Movement.y();
+                                     gaze_pos.z += Movement.z();
                                     //-----save position and quaternion to file
                                     
                                      if (PlayMode == 0||Rec_Sav) {
@@ -322,25 +325,12 @@ namespace sibr
                                      {
                                          return;
                                      }
-
-                                     // Compute eye with the parallax shift and asymetric fov
-                                     cam = computeEyeCam(m_headCamera, eye);
-
-                                     // Perform the scene rendering for the given view into the RenderTarget's FBO
                                      rt->clear();
                                      rt->bind();
                                      glViewport(0, 0, w, h);
                                      view.onRenderIBR(*rt.get(), cam);
                                      rt->unbind();
-
-                                     // Render the VR play space to help configuring the scene position and orientation
-                                     if (m_forceRenderVRPlaySpace || m_leftTriggerPressed || m_rightTriggerPressed)
-                                     {
-                                        rt->bind();
-                                        glViewport(0, 0, w, h);
-                                        renderVRPlaySpace(eye);
-                                        rt->unbind();
-                                     }
+                                     
 
                                      // Draw the left and right textures into the UI window
                                      if (optDest)

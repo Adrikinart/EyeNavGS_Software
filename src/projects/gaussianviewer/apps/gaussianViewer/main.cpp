@@ -332,8 +332,6 @@ int main(int ac, char** av)
 			window.close();
 		}
 
-		multiViewManager.onUpdate(sibr::Input::global());
-		multiViewManager.onRender(window);
 
 		window.swapBuffer();
 		CHECK_GL_ERROR;

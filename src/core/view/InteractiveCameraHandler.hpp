@@ -209,7 +209,11 @@ namespace sibr {
 		/** \return radius used for trackball*/
 		float & getRadius() { return _radius; }
 
+		// if Camera Recording is Monocular Mode
+		bool isMono;
+
 	private:
+
 
 		int _currentCamId; ///< Current snapped camera ID.
 

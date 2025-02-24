@@ -28,16 +28,34 @@ namespace sibr
 			sibr::loadFile(sibr::Resources::Instance()->getResourceFilePathName("texture.fp")));
 	}
 	void MonoRdrMode::Record(const sibr::Viewport& viewport,int width,int height) {
-		Recording++;
 		int codec = cv::VideoWriter::fourcc('H', '2', '6', '4'); 
 
 		size_t pos = inpath.find_last_of(".");
 
 		const std::string File = inpath.substr(0, pos);
-		const std::string& path = File+".mp4";
-		_outputVideo.open(path, codec, 30, cv::Size(width, height), true);
-		if (!_outputVideo.isOpened()) {
-			std::cerr << "Error: Could not open the video file for writing." << std::endl;
+
+		if (recordMono) {
+			// Monocular recording
+			const std::string path = File + ".mp4";
+			_outputVideo.open(path, codec, 30, cv::Size(width, height), true);
+			if (!_outputVideo.isOpened()) {
+				std::cerr << "Error: Could not open the video file for writing." << std::endl;
+			}
+		}
+		else {
+			// VR Mode recording
+			const std::string leftPath = File + "left.mp4";
+			const std::string rightPath = File + "right.mp4";
+
+			_outputVideoLeft.open(leftPath, codec, 30, cv::Size(width, height), true);
+			if (!_outputVideoLeft.isOpened()) {
+				std::cerr << "Error: Could not open the left video file for writing." << std::endl;
+			}
+
+			_outputVideoRight.open(rightPath, codec, 30, cv::Size(width, height), true);
+			if (!_outputVideoRight.isOpened()) {
+				std::cerr << "Error: Could not open the right video file for writing." << std::endl;
+			}
 		}
 	}
 	void	MonoRdrMode::render( ViewBase& view, const sibr::Camera& eye, const sibr::Viewport& viewport, IRenderTarget* optDest )
@@ -69,6 +87,8 @@ namespace sibr
 		}
 		int w = (int)viewport.finalWidth();
 		int h = (int)viewport.finalHeight();
+
+		
 
 		if (!_destRT || _destRT->w() != w || _destRT->h() != h)
 			_destRT.reset( new RenderTarget(w, h, SIBR_GPU_LINEAR_SAMPLING) );
@@ -122,7 +142,7 @@ namespace sibr
 		_quadShader.end();
 
 		if(Recording>0)
-			if (_outputVideo.isOpened()) {
+			if (_outputVideo.isOpened() || (_outputVideoLeft.isOpened() && _outputVideoRight.isOpened())) {
 				Recording++;
 				
 				glBindTexture(GL_TEXTURE_2D, _destRT->texture());
@@ -140,8 +160,15 @@ namespace sibr
 				cv::cvtColor(frame, frame, cv::COLOR_RGB2BGR);
 				cv::flip(frame, frame, 0);
 				
-				
-				_outputVideo.write(frame); 
+				if(recordMono)
+					_outputVideo.write(frame); 
+				else {
+					if (Recording % 2 == 0 && _outputVideoLeft.isOpened()) {
+						_outputVideoLeft.write(frame);
+					}
+					else if(_outputVideoRight.isOpened())
+						_outputVideoRight.write(frame);
+				}
 				
 
 				glBindTexture(GL_TEXTURE_2D, 0);
@@ -150,7 +177,11 @@ namespace sibr
 			recorded = 0;
 			if (_outputVideo.isOpened()) {
 				_outputVideo.release();
-		}
+			}
+			if (_outputVideoLeft.isOpened())
+				_outputVideoLeft.release();
+			if (_outputVideoRight.isOpened())
+				_outputVideoRight.release();
 		}
 #if 0
 std::cerr <<"End of render pass 1" << std::endl;

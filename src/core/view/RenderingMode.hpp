@@ -39,6 +39,8 @@ namespace sibr
 		int recorded = 0;
 		std::string inpath;
 		int Recording = 0;
+		bool recordMono;
+
 		/** Perform rendering of a view.
 		 *\param view the view to render
 		 *\param eye the current camera
@@ -91,7 +93,9 @@ namespace sibr
 
 		//if is recording
 		cv::VideoWriter _outputVideo;
-		
+
+		cv::VideoWriter _outputVideoLeft;
+		cv::VideoWriter _outputVideoRight;
 		/** Perform rendering of a view.
 		 *\param view the view to render
 		 *\param eye the current camera

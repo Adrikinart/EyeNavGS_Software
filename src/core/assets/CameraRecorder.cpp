@@ -219,32 +219,69 @@ namespace sibr
 	{
 		SIBR_LOG << "Loading csv path." << std::endl;
 		std::ifstream csvFile(filePath);
+		if (!csvFile.is_open()) {
+			SIBR_LOG << "Cannot open csv file" << std::endl;
+			return;
+		}
+		// Read CSV header
+		std::string header;
+		std::getline(csvFile, header);
 
 		std::string line;
-		int numImages = -1;
-		
-		if (csvFile.is_open()) {
-			while (std::getline(csvFile, line)) {
-				++numImages;  
-			}
 
+		// Check if the first two rows are identical (excluding viewIndex and FOV)
+		std::string line1, line2;
+		isMonocular = false;
+		if (std::getline(csvFile, line1) && std::getline(csvFile, line2)) {
+			std::istringstream stream1(line1);
+			std::istringstream stream2(line2);
+			std::string token1, token2;
+			// Skip the first field: viewIndex
+			std::getline(stream1, token1, ',');
+			std::getline(stream2, token2, ',');
+			// Skip the second field: FOV
+			std::getline(stream1, token1, ',');
+			std::getline(stream2, token2, ',');
+
+			isMonocular = true;  // Assume monocular mode
+			// Compare the remaining fields
+			while (std::getline(stream1, token1, ',') && std::getline(stream2, token2, ',')) {
+				if (token1 != token2) {
+					isMonocular = false;
+					SIBR_LOG << "VR Mode" << std::endl;
+					break;
+				}else
+					SIBR_LOG << "Monocular Mode" << std::endl;
+			}
 		}
-		else {
-			SIBR_LOG << "Cannot open csv file" << std::endl;
+		// Reset file pointer and move back to the data section
+		csvFile.clear();
+		csvFile.seekg(0);
+		
+		
+
+		std::getline(csvFile, header);  // Skip the header
+
+		int numImages = 0;
+		std::string tmpLine;
+		
+		while (std::getline(csvFile, line)) {
+			numImages++;  
 		}
 		csvFile.clear();  
 		csvFile.seekg(0); 
-
-
-		std::string header;
 		std::getline(csvFile, header);
+
+
 		sibr::Vector4f fov;
 		sibr::Vector3f pos;
 		sibr::Quaternionf quat;
+		int div = isMonocular ? 2 : 1;
 
-		std::vector<InputCamera::Ptr> cameras(numImages/2);
+		std::vector<InputCamera::Ptr> cameras(numImages/div);
 		
-		for (int i = 0, tep = 1; i < numImages; i+=1){
+		for (int i = 0, tep = 1; i < numImages; i++){
+			
 			std::getline(csvFile, line);
 			
 			std::istringstream lineStream(line);
@@ -270,7 +307,7 @@ namespace sibr
 				quat.coeffs()(j) = std::stof(token);
 			}
 
-			if (false)
+			if (!isMonocular)
 			{//using OpenXR traces, set it true
 				Eigen::Matrix3f mat;
 				mat << 1.0f, 0.0f, 0.0f,
@@ -283,13 +320,15 @@ namespace sibr
 
 
 
-			cameras[i / 2] = InputCamera::Ptr(new InputCamera(i / 2, w, h, pos, quat, true));
+			cameras[i / div] = InputCamera::Ptr(new InputCamera(i / div, w, h, pos, quat, true));
 			
-			cameras[i / 2]->fovy(fov[3]-fov[2]);
-			//cameras[i / 2]->aspect((fov.y() - fov.x()) / (fov.w() - fov.z())); 
-			cameras[i / 2]->znear(0.2f); 
-			cameras[i / 2]->zfar(250.f);
-			//cameras[i / 2]->perspective(cameras[i / 2]->fovy(), (float)w / (float)h, cameras[i / 2]->znear(), cameras[i / 2]->zfar());
+			cameras[i / div]->fovy(fov[3]-fov[2]);
+			if (!isMonocular)
+				cameras[i / div]->aspect((fov.y() - fov.x()) / (fov.w() - fov.z()));
+			cameras[i / div]->znear(0.2f); 
+			cameras[i / div]->zfar(250.f);
+			if (!isMonocular)
+				cameras[i / div]->perspective(cameras[i / div]->fovy(), (float)w / (float)h, cameras[i / div]->znear(), cameras[i / div]->zfar());
 
 		}
 
@@ -522,7 +561,7 @@ namespace sibr
 
 			// write data again(match the headset mode trace)
 			outFile << 1 << "," // View index
-				<< -0.942478 << "," << 0.698132 << "," << -0.959931 << "," << 0.767945 << "," 
+				<< -0.698132 << "," << 0.942478 << "," << -0.959931 << "," << 0.767945 << ","
 				<< position.x() << ","
 				<< position.y() << ","
 				<< position.z() << ","

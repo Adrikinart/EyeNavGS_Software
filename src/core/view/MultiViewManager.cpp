@@ -481,9 +481,10 @@ namespace sibr
 
 		_fpsCounter.update(_enableGUI && _showGUI);
 	}
-	void MultiViewManager::StartRec(const std::string &path) {
+	void MultiViewManager::StartRec(const std::string &path, bool isMono) {
 		_renderingMode->inpath = path;
 		_renderingMode->Recording = 1;
+		_renderingMode->recordMono = isMono;
 	}
 
 	void MultiViewManager::EndRec() {

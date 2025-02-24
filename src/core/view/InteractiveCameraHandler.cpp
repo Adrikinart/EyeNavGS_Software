@@ -533,10 +533,11 @@ namespace sibr {
 			else if (boost::filesystem::extension(path) == ".csv")
 				_cameraRecorder.loadCsv(path, _currentCamera.w(), _currentCamera.h());
 			else
-				_cameraRecorder.load(path);
+				 _cameraRecorder.load(path);
 			// dont play back until explicitly requested 
 			//							_cameraRecorder.playback();
-
+			//check if Monocular by loading csv
+			isMono = _cameraRecorder.isMonocular;
 			_cameraRecorder.playback();
 		}
 

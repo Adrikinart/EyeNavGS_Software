@@ -412,7 +412,7 @@ namespace sibr
 		 */
 		void	onRender(Window& win) override;
 
-		void StartRec(const std::string& path);
+		void StartRec(const std::string& path, bool isMono);
 
 		void EndRec();
 

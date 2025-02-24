@@ -292,7 +292,7 @@ int main(int ac, char** av)
 			if (!myArgs.Inpath.isInit())
 				myArgs.Inpath = myArgs.Inpath.get();
 			camera->LoadPath(myArgs.Inpath.get());
-			multiViewManager.StartRec(myArgs.Inpath.get());
+			multiViewManager.StartRec(myArgs.Inpath.get(), camera->isMono);
 
 			break;
 		}

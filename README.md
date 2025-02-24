@@ -262,6 +262,11 @@ SIBR_gaussianViewer_app_d.exe -m C:\Users\SIBR\models\train --rendering-mode 3 -
 ```
 If no `--rendering-size` is provided, default size for each eye is 2064x2272.
 
+## Replay Headset-Mode csv Files in Desktop Mode
+```sh
+SIBR_gaussianViewer_app_d.exe -m C:\User\SIBR\models\train -in C:\User\SIBR\Test\trace.csv --rendering-mode 4 --rendering-size 2064 2272
+```
+If no `--rendering-size` is provided, default size for each eye is 1200x789.
 
 ---
 

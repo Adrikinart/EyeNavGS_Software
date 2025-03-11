@@ -1,6 +1,6 @@
 # Eye Gaze Overlay Tool
 
-This repository provides a Python script that **overlays eye gaze positions** (from a trajectory CSV file) onto **two input videos** (left-eye video and right-eye video). The script computes the eye gaze position per frame based on **camera quaternions**, **eye gaze quaternions**, and **FOV** parameters, then draws a **semi-transparent red circle** on the corresponding frame of each video.
+This repository provides a Python script that **overlays eye gaze positions** (from a trajectory CSV file used for replaying the VR videos) onto **two input videos** (left-eye video and right-eye video). The script computes the eye gaze position per frame based on **camera quaternions**, **eye gaze quaternions**, and **FOV** parameters, then draws a **semi-transparent red circle** on the corresponding frame of each video.
 
 ---
 
@@ -46,6 +46,6 @@ python add_gaze.py \
 | `right_video`      | Path to the **right-eye** input video. The script will overlay the gaze data corresponding to `ViewIndex = 1` on this video.                                                                             | *(required)* |
 | `--output, -o`     | Output file prefix for the resulting videos. Two files will be created: `<prefix>_left_eye_overlay.mp4` and `<prefix>_right_eye_overlay.mp4`.                                                             | `eye_gaze`  |
 | `--alpha`          | The **transparency** of the red overlay circle. A value of `0.2` means 20% opaque and 80% transparent. Valid range is `0.0` (fully transparent) to `1.0` (fully opaque).                                  | `0.2`       |
-| `--width, -W`      | (Optional) Screen width in pixels. Only used if you modify the script to create blank backgrounds or for other custom usage.                                                                              | `1920`      |
-| `--height, -H`     | (Optional) Screen height in pixels. Same usage context as `--width`.                                                                                                                                    | `1080`      |
+| `--width, -W`      | (Optional) Screen width in pixels. Only used if you modify the script to create blank backgrounds or for other custom usage.                                                                              | `2160`      |
+| `--height, -H`     | (Optional) Screen height in pixels. Same usage context as `--width`.                                                                                                                                    | `2224`      |
 | `--fps`            | (Optional) Frames per second for the output videos if needed. If you are overlaying onto existing videos, the script will typically use the input video's frame rate.                                                                          | `30`        |

@@ -54,6 +54,7 @@ def project_gaze_to_screen_openxr(row, screen_width=2160, screen_height=2224):
     """
     Project 3D gaze to 2D screen coordinates using OpenXR FOV values,
     by computing the relative rotation between the camera quaternion and the gaze quaternion.
+    Applies a correction of 4.19° leftward for left eye and 4.19° rightward for right eye.
     """
     # 1. Extract camera and gaze quaternions
     cam_quat = [row.QuaternionX, row.QuaternionY, row.QuaternionZ, row.QuaternionW]
@@ -67,8 +68,20 @@ def project_gaze_to_screen_openxr(row, screen_width=2160, screen_height=2224):
     
     # 3. Rotate the default direction (-Z) by Q_rel to obtain gaze_dir
     gaze_dir = R_rel.apply([0, 0, -1])  # (x, y, z)
-
-    # 4. Depending on ViewIndex, select FOV angles (angleLeft, angleRight, angleDown, angleUp)
+    
+    # 4. Apply the 14+1.55°(deviation of FOV and eye gaze) correction based on ViewIndex
+    correction_angle = np.radians(15.55)  # Convert 15.5° to radians
+    
+    # Create rotation matrix for correction around Y-axis
+    if row.ViewIndex == 0:  # Left eye - rotate leftward (negative angle around Y)
+        correction_rot = R.from_euler('y', correction_angle)
+    else:  # Right eye - rotate rightward (positive angle around Y)
+        correction_rot = R.from_euler('y', -correction_angle)
+    
+    # Apply correction to gaze direction
+    gaze_dir = correction_rot.apply(gaze_dir)
+    
+    # 5. Depending on ViewIndex, select FOV angles (angleLeft, angleRight, angleDown, angleUp)
     if row.ViewIndex == 0:  # Left eye
         angle_left = row.FOV1
         angle_right = row.FOV2
@@ -79,26 +92,17 @@ def project_gaze_to_screen_openxr(row, screen_width=2160, screen_height=2224):
         angle_right = row.FOV2
         angle_down = row.FOV3
         angle_up = row.FOV4
-
-    # If the CSV file contains FOV in degrees, you may need to convert to radians:
-    # angle_left = np.radians(angle_left)
-    # angle_right = np.radians(angle_right)
-    # angle_down = np.radians(angle_down)
-    # angle_up = np.radians(angle_up)
     
-    # 5. Perform asymmetric frustum projection
+    # 6. Perform asymmetric frustum projection
     if gaze_dir[2] != 0:
         h_ratio = gaze_dir[0] / -gaze_dir[2]
         v_ratio = gaze_dir[1] / -gaze_dir[2]
-
         # Map h_ratio to [tan(angle_left), tan(angle_right)] → [0,1]
         x_normalized = (h_ratio - np.tan(angle_left)) / (np.tan(angle_right) - np.tan(angle_left))
         # Map v_ratio to [tan(angle_down), tan(angle_up)] → [0,1], then flip Y
         y_normalized = 1.0 - (v_ratio - np.tan(angle_down)) / (np.tan(angle_up) - np.tan(angle_down))
-
         screen_x = x_normalized * screen_width
         screen_y = y_normalized * screen_height
-
         # Clamp to screen boundaries
         screen_x = max(0, min(screen_x, screen_width))
         screen_y = max(0, min(screen_y, screen_height))

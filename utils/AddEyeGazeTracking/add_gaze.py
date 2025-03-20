@@ -5,12 +5,9 @@ from scipy.spatial.transform import Rotation as R
 import argparse
 from tqdm import tqdm
 import os
-
 def parse_csv(file_path):
     """
     Parse the CSV file containing eye gaze data.
-    This function attempts to read the CSV directly. If it fails,
-    it tries to read the file line by line and parse it manually.
     """
     try:
         df = pd.read_csv(file_path)
@@ -50,67 +47,96 @@ def parse_csv(file_path):
     
     return df
 
-def project_gaze_to_screen_openxr(row, screen_width=2160, screen_height=2224):
+def project_gaze_to_screen_openxr(row, screen_width=2160, screen_height=2224): 
     """
-    Project 3D gaze to 2D screen coordinates using OpenXR FOV values,
-    by computing the relative rotation between the camera quaternion and the gaze quaternion.
-    Applies a correction of 4.19° leftward for left eye and 4.19° rightward for right eye.
+    Converts a 3D gaze direction into 2D screen coordinates based on OpenXR FOV values.
+    Properly accounts for asymmetric FOV by adjusting the projection relative to the screen center.
+
+    This function operates in OpenCV's coordinate system, where the origin (0,0) is at the **top-left** corner.
+
+    Parameters:
+    - row: A Pandas DataFrame row containing quaternion values for the camera and gaze, along with FOV data.
+    - screen_width: The width of the screen in pixels.
+    - screen_height: The height of the screen in pixels.
+
+    Returns:
+    - A list [x, y] representing the 2D screen coordinates (in pixels) of the projected gaze point.
     """
-    # 1. Extract camera and gaze quaternions
-    cam_quat = [row.QuaternionX, row.QuaternionY, row.QuaternionZ, row.QuaternionW]
-    gaze_quat = [row.GazeQX, row.GazeQY, row.GazeQZ, row.GazeQW]
     
-    # 2. Compute relative rotation: Q_rel = Q_cam^-1 * Q_gaze
+    # 1. Extract quaternion values for the camera and gaze direction
+    cam_quat = [row.QuaternionX, row.QuaternionY, row.QuaternionZ, row.QuaternionW]  # Camera orientation
+    gaze_quat = [row.GazeQX, row.GazeQY, row.GazeQZ, row.GazeQW]  # Eye gaze direction
+    
+    # 2. Compute the relative rotation: Q_rel = Q_cam^-1 * Q_gaze
+    # This calculates how the gaze direction changes relative to the camera.
     R_cam = R.from_quat(cam_quat)
-    R_cam_inv = R_cam.inv()
+    R_cam_inv = R_cam.inv()  # Invert the camera rotation
     R_gaze = R.from_quat(gaze_quat)
-    R_rel = R_cam_inv * R_gaze
+    R_rel = R_cam_inv * R_gaze  # Compute relative rotation from camera to gaze
     
-    # 3. Rotate the default direction (-Z) by Q_rel to obtain gaze_dir
-    gaze_dir = R_rel.apply([0, 0, -1])  # (x, y, z)
+    # 3. Rotate the default direction (-Z) using Q_rel to obtain the gaze direction in camera space
+    gaze_dir = R_rel.apply([0, 0, -1])  # Resulting direction vector (x, y, z)
     
-    # 4. Apply the 14+1.55°(deviation of FOV and eye gaze) correction based on ViewIndex
-    correction_angle = np.radians(15.55)  # Convert 15.5° to radians
+    # 4. Extract FOV values in radians
+    # The FOV defines the left, right, bottom, and top viewing angles relative to the camera.
+    FOV_left = row.FOV1   # Left FOV (negative value)
+    FOV_right = row.FOV2  # Right FOV (positive value)
+    FOV_down = row.FOV3   # Bottom FOV (negative value)
+    FOV_up = row.FOV4     # Top FOV (positive value)
     
-    # Create rotation matrix for correction around Y-axis
-    if row.ViewIndex == 0:  # Left eye - rotate leftward (negative angle around Y)
-        correction_rot = R.from_euler('y', correction_angle)
-    else:  # Right eye - rotate rightward (positive angle around Y)
-        correction_rot = R.from_euler('y', -correction_angle)
-    
-    # Apply correction to gaze direction
-    gaze_dir = correction_rot.apply(gaze_dir)
-    
-    # 5. Depending on ViewIndex, select FOV angles (angleLeft, angleRight, angleDown, angleUp)
-    if row.ViewIndex == 0:  # Left eye
-        angle_left = row.FOV1
-        angle_right = row.FOV2
-        angle_down = row.FOV3
-        angle_up = row.FOV4
-    else:  # Right eye
-        angle_left = row.FOV1
-        angle_right = row.FOV2
-        angle_down = row.FOV3
-        angle_up = row.FOV4
-    
-    # 6. Perform asymmetric frustum projection
-    if gaze_dir[2] != 0:
-        h_ratio = gaze_dir[0] / -gaze_dir[2]
-        v_ratio = gaze_dir[1] / -gaze_dir[2]
-        # Map h_ratio to [tan(angle_left), tan(angle_right)] → [0,1]
-        x_normalized = (h_ratio - np.tan(angle_left)) / (np.tan(angle_right) - np.tan(angle_left))
-        # Map v_ratio to [tan(angle_down), tan(angle_up)] → [0,1], then flip Y
-        y_normalized = 1.0 - (v_ratio - np.tan(angle_down)) / (np.tan(angle_up) - np.tan(angle_down))
+    # 5. Compute tangent values for each FOV limit
+    # These values are used for screen-space projection
+    tan_left = np.tan(FOV_left)    
+    tan_right = np.tan(FOV_right)  
+    tan_down = np.tan(FOV_down)    
+    tan_up = np.tan(FOV_up)        
+
+    # 6. Assume the screen center is at (0.5, 0.5) in normalized coordinates
+    center_x_norm = 0.5
+    center_y_norm = 0.5
+
+    # 7. Compute the projected gaze position in screen space
+    if gaze_dir[2] < 0:  # Ensure gaze is directed towards the screen
+        h_ratio = gaze_dir[0] / -gaze_dir[2]  # Compute horizontal displacement ratio
+        v_ratio = gaze_dir[1] / -gaze_dir[2]  # Compute vertical displacement ratio
+
+        # 8. Normalize the horizontal component
+        if h_ratio <= tan_left:
+            x_normalized = 0
+        elif h_ratio >= tan_right:
+            x_normalized = 1
+        else:
+            if h_ratio < 0:
+                x_normalized = center_x_norm - h_ratio / tan_left
+            else:
+                x_normalized = center_x_norm + h_ratio / tan_right
+
+        # 9. Normalize the vertical component
+        if v_ratio <= tan_down:
+            y_normalized = 0
+        elif v_ratio >= tan_up:
+            y_normalized = 1
+        else:
+            if v_ratio < 0:
+                y_normalized = center_y_norm + v_ratio / tan_down
+            else:
+                y_normalized = center_y_norm - v_ratio / tan_up
+        
+        # 10. Convert normalized values to pixel coordinates
         screen_x = x_normalized * screen_width
-        screen_y = y_normalized * screen_height
-        # Clamp to screen boundaries
+        screen_y = y_normalized * screen_height  # OpenCV uses top-left as (0,0)
+
+        # Ensure the calculated coordinates do not exceed screen boundaries
         screen_x = max(0, min(screen_x, screen_width))
         screen_y = max(0, min(screen_y, screen_height))
+        
         return [screen_x, screen_y]
+    
     else:
-        # If gaze_dir[2] == 0, default to the center of the screen
-        return [screen_width/2, screen_height/2]
+        # If the gaze is not directed at the screen, return the center of the screen
+        return [screen_width / 2, screen_height / 2] 
 
+        
 def overlay_circle_with_alpha(frame, center_x, center_y, radius=20, alpha=0.2):
     """
     Overlay a semi-transparent red circle (alpha blending) on the given frame.

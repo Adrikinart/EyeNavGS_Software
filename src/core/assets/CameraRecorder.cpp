@@ -324,12 +324,26 @@ namespace sibr
 			
 			cameras[i / div]->fovy(fov[3]-fov[2]);
 			if (!isMonocular)
-				cameras[i / div]->aspect((fov.y() - fov.x()) / (fov.w() - fov.z()));
+				cameras[i / div]->aspect((fov[1] - fov[0]) / (fov[3] - fov[2]));
 			cameras[i / div]->znear(0.2f); 
 			cameras[i / div]->zfar(250.f);
-			if (!isMonocular)
-				cameras[i / div]->perspective(cameras[i / div]->fovy(), (float)w / (float)h, cameras[i / div]->znear(), cameras[i / div]->zfar());
+			if (!isMonocular) {
+				float angleLeft = fov[0];
+				float angleRight = fov[1];
+				float angleDown = fov[2];
+				float angleUp = fov[3];
 
+				float tanLeft = std::tan(std::abs(angleLeft));
+				float tanRight = std::tan(std::abs(angleRight));
+				float tanDown = std::tan(std::abs(angleDown));
+				float tanUp = std::tan(std::abs(angleUp));
+
+				float centerX = tanLeft / (tanLeft + tanRight);
+				float centerY = tanDown / (tanDown + tanUp);
+				cameras[i / div]->principalPoint(Eigen::Vector2f(1.f, 1.f) - Eigen::Vector2f(centerX, centerY));
+				cameras[i / div]->perspective(cameras[i / div]->fovy(), (float)w / (float)h, cameras[i / div]->znear(), cameras[i / div]->zfar());
+			}
+				
 		}
 
 		for (const InputCamera::Ptr cam : cameras)

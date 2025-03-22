@@ -91,41 +91,22 @@ def project_gaze_to_screen_openxr(row, screen_width=2160, screen_height=2224):
     tan_down = np.tan(FOV_down)    
     tan_up = np.tan(FOV_up)        
 
-    # 6. Assume the screen center is at (0.5, 0.5) in normalized coordinates
-    center_x_norm = 0.5
-    center_y_norm = 0.5
-
-    # 7. Compute the projected gaze position in screen space
+    # 6. Compute the projected gaze position in screen space
     if gaze_dir[2] < 0:  # Ensure gaze is directed towards the screen
         h_ratio = gaze_dir[0] / -gaze_dir[2]  # Compute horizontal displacement ratio
         v_ratio = gaze_dir[1] / -gaze_dir[2]  # Compute vertical displacement ratio
 
-        # 8. Normalize the horizontal component
-        if h_ratio <= tan_left:
-            x_normalized = 0
-        elif h_ratio >= tan_right:
-            x_normalized = 1
-        else:
-            if h_ratio < 0:
-                x_normalized = center_x_norm - h_ratio / tan_left
-            else:
-                x_normalized = center_x_norm + h_ratio / tan_right
+        # Map h_ratio to [tan(angle_left), tan(angle_right)] → [0,1]
+        x_normalized = (h_ratio - tan_left) / (tan_right - tan_left)
+        # Map v_ratio to [tan(angle_down), tan(angle_up)] → [0,1], then flip Y
+        y_normalized = 1.0 - (v_ratio - tan_down) / (tan_up - tan_down)
 
-        # 9. Normalize the vertical component
-        if v_ratio <= tan_down:
-            y_normalized = 0
-        elif v_ratio >= tan_up:
-            y_normalized = 1
-        else:
-            if v_ratio < 0:
-                y_normalized = center_y_norm + v_ratio / tan_down
-            else:
-                y_normalized = center_y_norm - v_ratio / tan_up
-        
         # 10. Convert normalized values to pixel coordinates
         screen_x = x_normalized * screen_width
         screen_y = y_normalized * screen_height  # OpenCV uses top-left as (0,0)
-
+        # Ensure the calculated coordinates do not exceed screen boundaries
+        screen_x = max(0, min(screen_x, screen_width))
+        screen_y = max(0, min(screen_y, screen_height))
         # Ensure the calculated coordinates do not exceed screen boundaries
         screen_x = max(0, min(screen_x, screen_width))
         screen_y = max(0, min(screen_y, screen_height))

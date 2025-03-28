@@ -107,16 +107,18 @@ namespace sibr
 
         if (m_openxrHmd->input()) {
             // Move camera with left stick
-            m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::LEFT, [this](float x, float y) {
-                float step = 0.05f;
-                Eigen::Vector3f forward = currentQ * Eigen::Vector3f(0, 0, -1); //calculate forward based on current Quaternion
+            m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::LEFT, [this, iq](float x, float y) {
+                float step = 0.05f;                
                 
+                Eigen::Vector3f forward =  currentQ * Eigen::Vector3f(0, 0, -1); //calculate forward based on current Quaternion
+               
                 if (abs(y) > 0.5f) {
                     Movement += (forward * y * step * m_controlSensitivity);
                 }
             });
-            m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::RIGHT, [this](float x, float y) {
+            m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::RIGHT, [this, iq](float x, float y) {
                 float step = 0.05f;
+                
                 Eigen::Vector3f right = currentQ * Eigen::Vector3f(1, 0, 0);   //calculate right based on current Quaternion
 
                 // Move camera with right horizontal stick

@@ -236,24 +236,25 @@ namespace sibr
 			std::istringstream stream1(line1);
 			std::istringstream stream2(line2);
 			std::string token1, token2;
-			// Skip the first field: viewIndex
-			std::getline(stream1, token1, ',');
-			std::getline(stream2, token2, ',');
-			// Skip the second field: FOV
-			std::getline(stream1, token1, ',');
-			std::getline(stream2, token2, ',');
 
-			isMonocular = true;  // Assume monocular mode
-			// Compare the remaining fields
+			// Skip first 5 fields: ViewIndex + FOV1-FOV4
+			for (int i = 0; i < 5; ++i) {
+				std::getline(stream1, token1, ',');
+				std::getline(stream2, token2, ',');
+			}
+
+			isMonocular = true;
 			while (std::getline(stream1, token1, ',') && std::getline(stream2, token2, ',')) {
 				if (token1 != token2) {
 					isMonocular = false;
 					SIBR_LOG << "VR Mode" << std::endl;
 					break;
-				}else
-					SIBR_LOG << "Monocular Mode" << std::endl;
+				}
 			}
+			if (isMonocular)
+				SIBR_LOG << "Monocular Mode" << std::endl;
 		}
+
 		// Reset file pointer and move back to the data section
 		csvFile.clear();
 		csvFile.seekg(0);

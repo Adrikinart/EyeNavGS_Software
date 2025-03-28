@@ -156,6 +156,8 @@ namespace sibr
 
         void setInitialPose(Eigen::Vector3f pos, Eigen::Vector4f q, float scale);
 
+        XrQuaternionf multiply(const Vector4f q1, const XrQuaternionf& q2);
+
         /**
          * @brief Callback to be notified when the headset idles the XR session
          */

@@ -1,0 +1,19 @@
+This repository is a modified fork of the SIBR (System for Image-Based Rendering) software:
+https://gitlab.inria.fr/sibr/sibr_core
+
+The following components are original to the 👁️NavGS (EyeNavGS) project and are licensed under the Apache License, Version 2.0:
+
+- utils/
+- src/core/assets/CameraRecorder.cpp (modified)
+- src/core/system/CommandLineArgs.cpp (modified)
+- src/core/system/CommandLineArgs.hpp (modified)
+- src/core/openxr/OpenXRHMD.cpp (modified)
+- src/core/openxr/OpenXRHMD.hpp (modified)
+- src/core/openxr/OpenXRRdrMode.cpp (modified)
+- src/core/openxr/OpenXRRdrMode.hpp (modified)
+- src/projects/gaussianviewer/apps/gaussianViewer/main.cpp (modified)
+- All README and documentation files not originally from SIBR
+
+These files were either modified or newly developed by the Systems and Multimedia Lab @ Rutgers University as part of the 👁️NavGS(EyeNavGS) project (2025).
+
+For original SIBR code and licensing terms, please refer to the `LICENSE` file in the root of this repository.

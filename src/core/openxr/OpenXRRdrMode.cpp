@@ -15,6 +15,11 @@
 #include <sstream>
 #include <opencv2/opencv.hpp>
 
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+
+
 namespace sibr
 {
 
@@ -42,12 +47,19 @@ namespace sibr
     }
 #endif
 
-    OpenXRRdrMode::OpenXRRdrMode(sibr::Window &window, Eigen::Vector3f ipos, Eigen::Vector4f iq, float scale, const std::string& configFile)
+    //OpenXRRdrMode::OpenXRRdrMode(sibr::Window &window, Eigen::Vector3f ipos, Eigen::Vector4f iq, float scale, const std::string& configFile)
+    OpenXRRdrMode::OpenXRRdrMode(sibr::Window& window, Eigen::Vector3f ipos, Eigen::Vector4f iq, float scale, const std::string& configFile, const std::string& sceneName)
     {
         XRwindow = &window;
         m_quadShader.init("Texture",
                           sibr::loadFile(sibr::Resources::Instance()->getResourceFilePathName("texture.vp")),
                           sibr::loadFile(sibr::Resources::Instance()->getResourceFilePathName("texture.fp")));
+
+        //output sceneName
+        _sceneName = sceneName;
+        if (_sceneName.empty()) {
+            _sceneName = "unknownscene";
+        }
 
         // Shader to render a red quad at world ground (xz plane)
         std::string vertexShader =
@@ -108,6 +120,7 @@ namespace sibr
         if (m_openxrHmd->input()) {
             // Move camera with left stick
             m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::LEFT, [this, iq](float x, float y) {
+                /*
                 float step = 0.05f;                
                 
                 Eigen::Vector3f forward =  currentQ * Eigen::Vector3f(0, 0, -1); //calculate forward based on current Quaternion
@@ -116,7 +129,15 @@ namespace sibr
                     Movement += (forward * y * step * m_controlSensitivity);
                 }
             });
+                */
+                float step = 0.05f;
+                Eigen::Vector3f up = currentQ * Eigen::Vector3f(0, 1, 0);
+                if (abs(y) > 0.5f) {
+                    Movement += (up * y * step * m_controlSensitivity);
+                }
+                });
             m_openxrHmd->input()->setStickMoveCallback(OpenXRInput::Hand::RIGHT, [this, iq](float x, float y) {
+                /*
                 float step = 0.05f;
                 
                 Eigen::Vector3f right = currentQ * Eigen::Vector3f(1, 0, 0);   //calculate right based on current Quaternion
@@ -131,6 +152,18 @@ namespace sibr
                     Movement += (up * y * step * m_controlSensitivity);
                 }
             });
+            */
+                float step = 0.05f;
+                Eigen::Vector3f right = currentQ * Eigen::Vector3f(1, 0, 0);
+                Eigen::Vector3f forward = currentQ * Eigen::Vector3f(0, 0, -1);
+                if (abs(x) > 0.5f) {
+                    Movement += (right * x * step * m_controlSensitivity);
+                }
+                if (abs(y) > 0.5f) {
+                    Movement += (forward * y * step * m_controlSensitivity);
+                }
+                });
+
             // Move scene with left hand drag (position + trigger)
            /* m_openxrHmd->input()->setTriggerCallback(OpenXRInput::Hand::LEFT, [this](float val) {
                 const Vector3f& handPose = vrToWorld(m_openxrHmd->input()->getHandPosePosition(OpenXRInput::Hand::LEFT));
@@ -274,8 +307,73 @@ namespace sibr
                                      gaze_pos.x += Movement.x();
                                      gaze_pos.y += Movement.y();
                                      gaze_pos.z += Movement.z();
-                                    //-----save position and quaternion to file
-                                    
+
+                                     // Get timestamp in microseconds
+                                     using namespace std::chrono;
+                                                                          
+                                     auto now = high_resolution_clock::now();
+                                     auto now_us = time_point_cast<microseconds>(now);
+                                     auto epoch = now_us.time_since_epoch().count();
+                                     double epoch_ms = static_cast<double>(epoch) / 1000.0;
+
+
+                                     // Get realtime with millisecond precision
+                                     auto now_sys = system_clock::now();
+                                     auto duration = now_sys.time_since_epoch();
+                                     auto millis = duration_cast<milliseconds>(duration).count();
+                                     auto seconds_part = duration_cast<std::chrono::seconds>(duration);
+                                     auto ms_part = millis % 1000;
+
+                                     std::time_t time_now = system_clock::to_time_t(now_sys);
+                                     std::tm tm_now;
+                                     localtime_s(&tm_now, &time_now);
+
+                                     std::ostringstream realtimeStream;
+                                     realtimeStream << std::put_time(&tm_now, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(3) << ms_part;
+
+                                     //Compute elapsed_ms
+                                     auto now_steady = std::chrono::steady_clock::now();
+                                     //auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now_steady - recordingStartTime).count();
+                                     if (recordingStartTime.time_since_epoch().count() == 0) {
+                                         recordingStartTime = now_steady;
+                                     }
+
+                                     auto elapsed = std::chrono::duration<double, std::milli>(now_steady - recordingStartTime).count();
+                                     
+                                     //Get ISO 8601 timestamp with local timezone 
+                                     /*
+                                     auto now_sys = std::chrono::system_clock::now();
+                                     auto duration = now_sys.time_since_epoch();
+                                     auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+                                     auto ms_part = millis % 1000;
+
+                                     std::time_t now_tt = std::chrono::system_clock::to_time_t(now_sys);
+                                     std::tm local_tm;
+                                     localtime_s(&local_tm, &now_tt);  // Windows-safe
+                                     */
+
+                                     std::ostringstream isoStream;
+                                     isoStream << std::put_time(&tm_now, "%Y-%m-%dT%H:%M:%S")
+                                         << '.' << std::setw(3) << std::setfill('0') << ms_part;
+
+                                     // Timezone offset
+                                     //long timezone_offset_sec = _timezone;
+                                     long timezone_offset_sec = 0;
+                                     _get_timezone(&timezone_offset_sec);
+
+                                     int offset_hours = -timezone_offset_sec / 3600;
+                                     int offset_minutes = (abs(timezone_offset_sec) / 60) % 60;
+
+                                     isoStream << (offset_hours >= 0 ? '+' : '-')
+                                         << std::setw(2) << std::setfill('0') << abs(offset_hours)
+                                         << ":" << std::setw(2) << std::setfill('0') << offset_minutes;
+
+                                     
+                                     
+                                     //-----save position and quaternion to file
+
+                                     /*
+                                     
                                      if (PlayMode == 0||Rec_Sav) {
                                          outFile << viewIndex << "," // View index
                                              << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
@@ -285,6 +383,21 @@ namespace sibr
                                              << gaze_pos.x << "," << gaze_pos.y << "," << gaze_pos.z
                                              << "\n";
                                      }
+                                     */
+
+                                     outFile << viewIndex << ","
+                                         << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
+                                         << pos.x() << "," << pos.y() << "," << pos.z() << ","
+                                         << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << ","
+                                         << gaze_q.x << "," << gaze_q.y << "," << gaze_q.z << "," << gaze_q.w << ","
+                                         << gaze_pos.x << "," << gaze_pos.y << "," << gaze_pos.z << ","
+                                         << epoch << "," << realtimeStream.str() << ","
+                                         //<< elapsed << "," << isoStream.str()
+                                         << std::fixed << std::setprecision(3) << elapsed << "," << isoStream.str() << "," 
+                                         << std::fixed << std::setprecision(3) << epoch_ms
+                                         << "\n";
+
+
 
                                      // OpenXR eye position is in world coordinates system (+x: right, +y: up; +z: backward)
                                      // 3DGS reference scenes have the following coordinate system : +x: right, +y: down, +z: forward
@@ -406,8 +519,12 @@ namespace sibr
 
             const std::string File= saveFilePath.substr(0, pos);
             // video file name is File+left/right
-            leftEyeVideoWriter.open(File+"left.mp4", fourcc, fps, frameSize);
-            rightEyeVideoWriter.open(File+"right.mp4", fourcc, fps, frameSize);
+            //leftEyeVideoWriter.open(File+"left.mp4", fourcc, fps, frameSize);
+            //rightEyeVideoWriter.open(File+"right.mp4", fourcc, fps, frameSize);
+
+            leftEyeVideoWriter.open(_sceneName + "_left.mp4", fourcc, fps, frameSize);
+            rightEyeVideoWriter.open(_sceneName + "_right.mp4", fourcc, fps, frameSize);
+
 
             if (!Rec_Sav) {
                 if (!inFile.is_open()) {
@@ -444,24 +561,33 @@ namespace sibr
         ImGui::Checkbox("Y-Invert scene", &m_flipY);
 
         // Add Save Tracks button
-        if (ImGui::Button("Save Traces")) {
+        if (ImGui::Button("Start Trace Recording")) {
             PlayMode = 0;
+            recordingStartTime = std::chrono::steady_clock::now();
+
             
             if (!outFile.is_open()) {
-                const std::string& out = "Output" + std::to_string(FrameIndex++)+".csv";
+                //const std::string& out = "Output" + std::to_string(FrameIndex++)+".csv";
+                const std::string out = _sceneName + "_trace_" + std::to_string(FrameIndex++) + ".csv";
                 outFile.open(out, std::ios::app);
                 // Write the CSV header if the file is being created
+                /*
                 if (outFile.tellp() == 0) {
                     outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ\n";
                 }
+                */
+                if (outFile.tellp() == 0) {
+                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ,timestamp,realtime,elapsed_ms,iso_time,epoch_ms\n";
+                }
+
             }
             
             SIBR_LOG << "Start saving HMD traces to output file" << std::endl;
         }
 
-        // Add Stop Saving button
+        // Add End Trace Recording button
         ImGui::SameLine();  // Display on the same line
-        if (ImGui::Button("Stop Saving")) {
+        if (ImGui::Button("End Trace Recording")) {
             if (outFile.is_open()) {
                 outFile.close();
             }
@@ -481,9 +607,12 @@ namespace sibr
         if (ImGui::Button("Recording and Saving") ){
             PlayMode = 0;
             Rec_Sav = true;
+            recordingStartTime = std::chrono::steady_clock::now();
+
             StartRecord("output_Rec_");
             if (!outFile.is_open()) {
-                const std::string& out = "Output" + std::to_string(FrameIndex++) + ".csv";
+                //const std::string& out = "Output" + std::to_string(FrameIndex++) + ".csv";
+                const std::string out = _sceneName + "_output_" + std::to_string(FrameIndex++) + ".csv";
                 outFile.open(out, std::ios::app);
                 // Write the CSV header if the file is being created
                 if (outFile.tellp() == 0) {

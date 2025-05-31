@@ -260,6 +260,15 @@ int main(int ac, char** av)
 	
 	// Add views to mvm.
 	MultiViewManager        multiViewManager(window, false);
+
+	// Extract Scene Name from modelPath
+	std::string sceneName;
+	{
+		const std::string& modelPath = myArgs.modelPath.get();
+		size_t lastSlash = modelPath.find_last_of("/\\");
+		sceneName = (lastSlash != std::string::npos) ? modelPath.substr(lastSlash + 1) : modelPath;
+	}
+
 	
 	switch (myArgs.rendering_mode) {
 		case 1:
@@ -271,7 +280,8 @@ int main(int ac, char** av)
 				vrConfigPath += "/";
 			vrConfigPath += "vr.json";
 			Eigen::Vector4f iq = myArgs.initial_quaternion.get();
-			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get(), vrConfigPath);
+			//auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get(), vrConfigPath);
+			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get(), vrConfigPath, sceneName);
 			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
 			break;
 		}
@@ -283,7 +293,8 @@ int main(int ac, char** av)
 			if (!myArgs.Inpath.isInit())
 				myArgs.Inpath = myArgs.Inpath.get();
 			Eigen::Vector4f iq = myArgs.initial_quaternion.get();
-			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get(), vrConfigPath);
+			//auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get(), vrConfigPath);
+			auto mode = new OpenXRRdrMode(window, myArgs.initial_position.get(), iq, myArgs.initial_scale.get(), vrConfigPath, sceneName);
 			multiViewManager.renderingMode(IRenderingMode::Ptr(mode));
 			mode->StartRecord(myArgs.Inpath.get());
 			break;

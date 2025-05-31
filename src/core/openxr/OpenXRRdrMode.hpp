@@ -36,7 +36,8 @@ namespace sibr
         /// Constructor.
         std::string OutputName;
 
-        explicit OpenXRRdrMode(sibr::Window& window, Eigen::Vector3f ipos, Eigen::Vector4f iq, float scale, const std::string& configFile);
+        //explicit OpenXRRdrMode(sibr::Window& window, Eigen::Vector3f ipos, Eigen::Vector4f iq, float scale, const std::string& configFile);
+        explicit OpenXRRdrMode(sibr::Window& window, Eigen::Vector3f ipos, Eigen::Vector4f iq, float scale, const std::string& configFile, const std::string& sceneName);
         ~OpenXRRdrMode();
 
         sibr::Window* XRwindow;
@@ -76,7 +77,6 @@ namespace sibr
         /** \return the right eye RT. */
         virtual const std::unique_ptr<RenderTargetRGB>& rRT() { return _rightRT; }
 
-        float initial_sacle;
         bool isEyeTracking = true;
         void StartRecord(const std::string& saveFilePath);
 
@@ -115,6 +115,8 @@ namespace sibr
         void updateHeadCamera(const Camera& camera);
         Camera computeEyeCam(const Camera& cam, OpenXRHMD::Eye eye) const;
         void renderVRPlaySpace(OpenXRHMD::Eye eye);
+        std::chrono::steady_clock::time_point recordingStartTime; /// Use steady_clock for monotonic, non-adjusted time tracking
+        std::string _sceneName; ///scene name for output csv
 
 };
 

@@ -12,6 +12,7 @@
 
 #pragma once
 
+# include <chrono>
 # include <vector>
 # include "core/system/Config.hpp"
 # include "core/system/String.hpp"

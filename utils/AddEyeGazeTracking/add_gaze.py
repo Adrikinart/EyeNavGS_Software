@@ -1,4 +1,10 @@
-#👁️NavGS(EyeNavGS)
+# SPDX-FileCopyrightText: 2025 Systems and Multimedia Lab @ Rutgers University
+# SPDX-License-Identifier: Apache-2.0
+#
+# This file is part of the 👁️NavGS (EyeNavGS) project.
+# See LICENSE_EYENAVGS.txt and NOTICE for details.
+
+
 
 import numpy as np
 import pandas as pd

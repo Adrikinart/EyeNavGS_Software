@@ -1,3 +1,11 @@
+:: SPDX-FileCopyrightText: 2025 Systems and Multimedia Lab @ Rutgers University
+:: SPDX-License-Identifier: Apache-2.0
+::
+:: This batch script is part of the 👁️NavGS (EyeNavGS) project.
+:: See LICENSE_EYENAVGS.txt and NOTICE for details.
+
+
+
 @echo off
 REM ======== User-Defined Paths ========
 set viewer_exe=D:\JasonD\projects\sibr\SIBR_Gaussian_VRV\install\bin\SIBR_gaussianViewer_app_d.exe

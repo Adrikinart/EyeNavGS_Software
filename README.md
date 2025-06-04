@@ -12,15 +12,12 @@ Abstract: *3D Gaussian Splatting (3DGS) is an emerging media representation that
   <div class="container is-max-desktop content">
     <h2 class="title">BibTeX</h2>
     <pre><code>
-      @misc{ding2025eyenavgs6dofnavigationdataset,
-      title={EyeNavGS: A 6-DoF Navigation Dataset and Record-n-Replay Software for Real-World 3DGS Scenes in VR}, 
-      author={Zihao Ding and Cheng-Tse Lee and Mufeng Zhu and Tao Guan and Yuan-Chun Sun and Cheng-Hsin Hsu and Yao Liu},
-      year={2025},
-      eprint={2506.02380},
-      archivePrefix={arXiv},
-      primaryClass={cs.MM},
-      url={https://arxiv.org/abs/2506.02380}, 
-}
+      @article{ding2025eyenavgs6dofnavigationdataset,
+              title={EyeNavGS: A 6-DoF Navigation Dataset and Record-n-Replay Software for Real-World 3DGS Scenes in VR},
+              author={Zihao Ding and Cheng-Tse Lee and Mufeng Zhu and Tao Guan and Yuan-Chun Sun and Cheng-Hsin Hsu and Yao Liu},
+              journal={arXiv preprint arXiv:2506.02380},
+              year={2025}
+      }
     </code></pre>
   </div>
 </section>
@@ -550,14 +547,11 @@ Tested with an HTC Vive Pro with `beta - SteamVR Beta Update` on Ubuntu distribu
 If you use this 👁️NavGS datase in your research, please cite:
 
 ```textile
-@misc{ding2025eyenavgs6dofnavigationdataset,
-      title={EyeNavGS: A 6-DoF Navigation Dataset and Record-n-Replay Software for Real-World 3DGS Scenes in VR}, 
-      author={Zihao Ding and Cheng-Tse Lee and Mufeng Zhu and Tao Guan and Yuan-Chun Sun and Cheng-Hsin Hsu and Yao Liu},
-      year={2025},
-      eprint={2506.02380},
-      archivePrefix={arXiv},
-      primaryClass={cs.MM},
-      url={https://arxiv.org/abs/2506.02380}, 
+@article{ding2025eyenavgs6dofnavigationdataset,
+        title={EyeNavGS: A 6-DoF Navigation Dataset and Record-n-Replay Software for Real-World 3DGS Scenes in VR},
+        author={Zihao Ding and Cheng-Tse Lee and Mufeng Zhu and Tao Guan and Yuan-Chun Sun and Cheng-Hsin Hsu and Yao Liu},
+        journal={arXiv preprint arXiv:2506.02380},
+        year={2025}
 }
 ```
 

@@ -2,22 +2,23 @@
 
 Zihao Ding¹, Cheng‑Tse Lee², Mufeng Zhu¹, Tao Guan¹, Yuan‑Chun Sun², Cheng‑Hsin Hsu², Yao Liu¹  
 ¹ Rutgers University | ² National Tsing Hua University  
-| [Webpage](https://symmru.github.io/EyeNavGS/) | ~~Full Paper~~ (link will be updated here soon)
+| [Webpage](https://symmru.github.io/EyeNavGS/) | [Full Paper](https://doi.org/10.48550/arXiv.2506.02380)
 
 ---
 
-Abstract: *3D Gaussian Splatting (3DGS) is an emerging media representation that reconstructs real-world 3D scenes in high fidelity, enabling 6-Degrees-of-Freedom (6-DoF) navigation in virtual reality (VR). However, developing and evaluating 3DGS-enabled applications, such as adaptive streaming systems and rendering optimization, require realistic user navigation data, which is currently unavailable for photorealistic 3DGS reconstructions of real-world scenes. In this paper, we introduce 👁️NavGS (EyeNavGS), the first publicly available 6-DoF navigation dataset featuring traces from 46 participants exploring twelve diverse, real-world 3DGS scenes. The dataset was collected at two sites, using the Meta Quest Pro headsets, recording the head pose and eye gaze data for each rendered frame during free world standing 6-DoF navigation. For each of the twelve scenes, we performed careful scene initialization to correct for scene tilt and scale, ensuring a perceptually-comfortable VR experience. We also release our open-source SIBR viewer software fork with record-and-replay functionalities and a suite of utility tools for data processing, conversion, and visualization. The 👁️NavGS dataset and its accompanying software tools provide valuable resources for advancing research in 6-DoF viewport prediction, adaptive streaming, 3D saliency, and foveated rendering for 3DGS scenes. The 👁️NavGS dataset is available at: https://symmru.github.io/EyeNavGS/.*
+Abstract: *3D Gaussian Splatting (3DGS) is an emerging media representation that reconstructs real-world 3D scenes in high fidelity, enabling 6-degrees-of-freedom (6-DoF) navigation in virtual reality (VR). However, developing and evaluating 3DGS-enabled applications and optimizing their rendering performance, require realistic user navigation data. Such data is currently unavailable for photorealistic 3DGS reconstructions of real-world scenes. This paper introduces 👁️NavGS (EyeNavGS), the first publicly available 6-DoF navigation dataset featuring traces from 46 participants exploring twelve diverse, real-world 3DGS scenes. The dataset was collected at two sites, using the Meta Quest Pro headsets, recording the head pose and eye gaze data for each rendered frame during free world standing 6-DoF navigation. For each of the twelve scenes, we performed careful scene initialization to correct for scene tilt and scale, ensuring a perceptually-comfortable VR experience. We also release our open-source SIBR viewer software fork with record-and-replay functionalities and a suite of utility tools for data processing, conversion, and visualization. The 👁️NavGS dataset and its accompanying software tools provide valuable resources for advancing research in 6-DoF viewport prediction, adaptive streaming, 3D saliency, and foveated rendering for 3DGS scenes. The 👁️NavGS dataset is available at: [👁️NavGS: 6-DoF Navigation Dataset for 3DGS in VR](https://symmru.github.io/EyeNavGS/).*
 
 <section class="section" id="BibTeX">
   <div class="container is-max-desktop content">
     <h2 class="title">BibTeX</h2>
-    <pre><code>@inproceedings{EyeNavGS,
-      title        = {EyeNavGS: A 6-DoF Navigation Dataset and Record-n-Replay Software for Real-World 3DGS Scenes in VR},
-      author       = {Zihao Ding and Cheng-Tse Lee and Mufeng Zhu and Tao Guan and Yuan-Chun Sun and Cheng-Hsin Hsu and Yao Liu},
-      year         = {2025},
-      month        = {May},
-      url          = {https://symmru.github.io/EyeNavGS/}
-}</code></pre>
+    <pre><code>
+      @article{ding2025eyenavgs6dofnavigationdataset,
+              title={EyeNavGS: A 6-DoF Navigation Dataset and Record-n-Replay Software for Real-World 3DGS Scenes in VR},
+              author={Zihao Ding and Cheng-Tse Lee and Mufeng Zhu and Tao Guan and Yuan-Chun Sun and Cheng-Hsin Hsu and Yao Liu},
+              journal={arXiv preprint arXiv:2506.02380},
+              year={2025}
+      }
+    </code></pre>
   </div>
 </section>
 
@@ -546,17 +547,33 @@ Tested with an HTC Vive Pro with `beta - SteamVR Beta Update` on Ubuntu distribu
 If you use this 👁️NavGS datase in your research, please cite:
 
 ```textile
-@inproceedings{EyeNavGS,
-    title={{EyeNavGS: A 6-DoF Navigation Dataset and Record-n-Replay Software for Real-World 3DGS Scenes in VR}},
-    author={{Zihao Ding and Cheng-Tse Lee and Mufeng Zhu and Tao Guan and Yuan-Chun Sun and Cheng-Hsin Hsu and Yao Liu}},
-    year={2025},
-    month={May},
+@article{ding2025eyenavgs6dofnavigationdataset,
+        title={EyeNavGS: A 6-DoF Navigation Dataset and Record-n-Replay Software for Real-World 3DGS Scenes in VR},
+        author={Zihao Ding and Cheng-Tse Lee and Mufeng Zhu and Tao Guan and Yuan-Chun Sun and Cheng-Hsin Hsu and Yao Liu},
+        journal={arXiv preprint arXiv:2506.02380},
+        year={2025}
 }
 ```
 
 ---
 
 ## License
+
+This repository is a **modified fork** of the [SIBR (System for Image-Based Rendering)](https://gitlab.inria.fr/sibr/sibr_core) software.  
+It includes both:
+
+- **Original code from SIBR**, licensed under its own terms (see the `LICENSE` file), and
+
+- **New components and modifications** developed by the 👁️NavGS project, licensed under the **Apache License, Version 2.0**.  (see`LICENSE_EYENAVGS.md`file)
+
+You may obtain a copy of the Apache License at:
+
+> http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, the software distributed under this license is distributed on an **"AS IS" BASIS**,  
+**WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND**, either express or implied.
+
+Please refer to the `NOTICE` and `LICENSE_EYENAVGS.txt` files for details on which parts are covered under Apache 2.0.
 
 ---
 

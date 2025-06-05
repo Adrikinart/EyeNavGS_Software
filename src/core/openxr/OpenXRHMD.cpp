@@ -7,6 +7,13 @@
 //
 // Author: Cédric CHEDALEUX <cedric.chedaleux@orange.com> et al.
 
+// SPDX-FileCopyrightText: 2025 Systems and Multimedia Lab @ Rutgers University
+// SPDX-License-Identifier: Apache-2.0
+//
+// This file is part of the 👁️NavGS (EyeNavGS) project.
+// It is a modified version of original code from the SIBR project.
+// See LICENSE_EYENAVGS.md and NOTICE for details.
+
 #include <cstdlib>
 #include <iostream>
 #include <stdio.h>

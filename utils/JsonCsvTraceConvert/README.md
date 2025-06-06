@@ -1,67 +1,122 @@
-# Json Trace to CSV trace
+# 👁️NavGS: A 6-DoF Navigation Dataset and Record-n-Replay Software for Real-World 3DGS Scenes in VR
+
+-------------------------------------------------------------------------------------------------------
 
 ## Overview
-Convert traces from JSON files to CSV format.
 
-## Example File Formats
-1. **JSON**
-Here's an example of the JSON format:(one frame)
-```json
-{
-    "id": 0,
-    "img_name": "DSC07956",
-    "width": 1297,
-    "height": 840,
-    "position": [
-        0.32511876709066195,
-        2.9957802654512298,
-        -3.225355003982969
-    ],
-    "rotation": [
-        [
-            0.9999338259558068,
-            -0.010638588983250229,
-            -0.004377685898681347
-        ],
-        [
-            0.008907733496057774,
-            0.9568136992250932,
-            -0.2905653063584087
-        ],
-        [
-            0.007279834705902121,
-            0.2905070832176699,
-            0.9568451487085131
-        ]
-    ],
-    "fy": 963.0890448094842,
-    "fx": 961.2246942396505,
-    "is_key_frame": true
-}
+**Trace Format Conversion Tool** from `👁️NavGS (EyeNavGS)`
+
+`utils/JsonCsvTraceConvert/`
+
+This utility folder provides C++ and Python tools to convert camera traces between the `.csv` format used by 👁️NavGS and the `.json` format used by other popular frameworks, ensuring cross-platform compatibility. Given a `.json` trace file exported from a viewer like NeRFstudio, the `JsonToCSV.cpp` tool converts it into the `.csv` format required by the 👁️NavGS viewer. Conversely, given a `.csv` trace recorded by 👁️NavGS, the `CsvToJson.cpp` (or `csv_to_json.py`) tool converts it into the `.json` format for use in external viewers.
+
+Use this toolkit to seamlessly move camera trajectories between 👁️NavGS and other popular frameworks for analysis and replay.
+
+---
+
+#### 1. Prerequisites
+
+##### C++ Tools (`JsonToCSV.cpp` & `CsvToJson.cpp`)
+
+- **Compiler:** A C++17 compliant compiler (e.g., g++, Clang++, MSVC).
+
+- **Dependencies:**
+  
+  1. **Eigen:** A C++ template library for linear algebra.
+  
+  2. **nlohmann/json:** A single-header JSON library for C++.
+  
+  It is recommended to place these libraries in a shared `external` directory.
+
+##### Python Script (`csv_to_json.py`)
+
+- **Interpreter:** Python 3.6+
+
+- **Dependencies:** Install `NumPy` and `SciPy` via pip:
+  
+  ```bash
+  pip install numpy scipy
+  ```
+
+---
+
+#### 2. Folder Structure
+
+```textile
+utils/JsonCsvTraceConvert/
+  ├── JsonToCSV.cpp
+  ├── CsvToJson.cpp
+  ├── csv_to_json.py
+  └── README.md`
 ```
-2. **CSV**
-Here's an example of the CSV format converted:
-![Csv_example](Csv_example.png)
 
-## Installation
 
-1. **Clone the repository**:
-    ```bash
-    git clone https://github.com/symmru/SIBR_Gaussian_VRV.git
-    cd SIBR_Gaussian_VRV
-    cd JsonTrace_toCsv
-    ```
 
-2. **Install required libraries**:
-   - [Eigen](https://eigen.tuxfamily.org/dox/GettingStarted.html): Linear algebra library.
-   - [nlohmann/json](https://github.com/nlohmann/json): JSON library for C++.
+- **`JsonToCSV.cpp`**: Converts JSON traces (exported from other frameworks) to the CSV format used by the 👁️EyeNavGS viewer.
 
-3. **Compile the code**:
-   Compile the code using a C++ compiler like `g++` or `clang++`:
+- **`CsvToJson.cpp`**: Converts 👁️EyeNavGS's CSV traces into the JSON format used by frameworks like NeRFstudio.
+
+- **`csv_to_json.py`**: A Python-based alternative for the CSV-to-JSON conversion.
+
+---
+
+#### 3. How to Use
+
+##### Step 1: Compile C++ Tools
+
+From a terminal, run the following commands. Ensure you adjust the `-I` flag to point to the `external` directory containing the dependencies.
+
+```bash
+# Compile the JSON to CSV converter
+g++ JsonToCSV.cpp -o JsonToCSV -I/path/to/external -std=c++17
+
+# Compile the CSV to JSON converter
+g++ CsvToJson.cpp -o CsvToJson -I/path/to/external -std=c++17
+```
+
+##### Step 2: Run Conversion Tools
+
+1. **Convert JSON to CSV (for use in EyeNavGS):**
+   
    ```bash
-   g++ JsonToCSV.cpp -o main -I/path/to/nlohmann_json -I/path/to/eigen3 -std=c++17
+   # Usage: ./<executable> <input.json> <output.csv>
+   ./JsonToCSV external_trace.json eyenavgs_trace.csv
    ```
-4. **Run the code**
-    ```bash
-    ./JsonToCSV <input_json_file_path> <output_csv_file_path>
-    ```
+
+2. **Convert CSV to JSON (for use in other frameworks):** *Note: The `--width` and `--height` of the original capture are required arguments.*
+   
+   Using the C++ tool:
+   
+   ```bash
+   # Usage: ./<executable> <input.csv> <output.json> <width> <height>
+   ./CsvToJson eyenavgs_trace.csv external_trace.json 1297 840
+   ```
+   
+   Using the Python script:
+   
+   ```bash
+   # Usage: python csv_to_json.py <input.csv> <output.json> --width <W> --height <H>
+   python csv_to_json.py eyenavgs_trace.csv external_trace.json --width 1297 --height 840
+   ```
+
+---
+
+#### 4. Important Limitations: Data Loss During Conversion
+
+It is critical to understand that the conversion from JSON to CSV is **lossy**. The `JsonToCSV.cpp` script is designed to extract only the geometric data required for replay and does not preserve all metadata from the source file.
+
+The following fields from a source JSON file are **discarded** during conversion to CSV:
+
+- `id`: The unique frame identifier.
+
+- `img_name`: The source image filename.
+
+- `is_key_frame`: A boolean flag indicating if the frame is a keyframe.
+
+Consequently, the inverse conversion scripts (`CsvToJson.cpp` and `csv_to_json.py`) cannot recover this lost information. They will generate **placeholder values** for these fields in the reconstructed JSON file:
+
+- `id` is replaced with a sequential 0-based index.
+
+- `img_name` is replaced with a generic name (e.g., "reconstructed_1").
+
+- `is_key_frame` is hardcoded to `false`.

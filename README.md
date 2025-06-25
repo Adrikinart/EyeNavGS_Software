@@ -50,7 +50,7 @@ You'll need the following:
 
 - **Doxygen 1.8.17+**
 
-- **CUDA 10.1+** (optional)
+- **CUDA 10.1+**
 
 - An **NVIDIA GPU**
 1. **Clone the repository**:

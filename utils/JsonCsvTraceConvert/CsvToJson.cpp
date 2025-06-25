@@ -85,17 +85,17 @@ int main(int argc, char* argv[]) {
 
             json position = {
                 std::stod(values[5]), // PositionX
-                std::stod(values[6]), // PositionY
-                std::stod(values[7])  // PositionZ
+                -std::stod(values[6]), // Position-Y
+                -std::stod(values[7])  // Position-Z
             };
 
             double qw = std::stod(values[11]); // W 
-            double qz = std::stod(values[10]); // Z
+            double qz_neg = std::stod(values[10]); // -Z
             double qy_neg = std::stod(values[9]); // -Y
-            double qx_neg = std::stod(values[8]); // -X
+            double qx = std::stod(values[8]); // X
 
             // Create the Eigen Quaternion object
-            Eigen::Quaternionf quaternion(qw, -qx_neg, -qy_neg, qz);
+            Eigen::Quaternionf quaternion(qw, qx, -qy_neg, -qz_neg);
 
             // Normalize the quaternion
             quaternion.normalize();

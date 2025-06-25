@@ -31,8 +31,8 @@ def csv_to_json(csv_path, json_path, width, height):
             for i, row in enumerate(reader):
                 position = [
                     float(row['PositionX']),
-                    float(row['PositionY']),
-                    float(row['PositionZ'])
+                    -float(row['PositionY']),
+                    -float(row['PositionZ'])
                 ]
 
                 csv_w = float(row['QuaternionW'])
@@ -40,9 +40,9 @@ def csv_to_json(csv_path, json_path, width, height):
                 csv_y = float(row['QuaternionY'])
                 csv_z = float(row['QuaternionZ'])
 
-                quat_x = -csv_x
+                quat_x = csv_x
                 quat_y = -csv_y
-                quat_z = csv_z
+                quat_z = -csv_z
                 quat_w = csv_w
 
                 r = Rotation.from_quat([quat_x, quat_y, quat_z, quat_w])
@@ -96,4 +96,3 @@ if __name__ == "__main__":
 
 # Example usage:
 # python csv_to_json.py input.csv output.json --width 1297 --height 840
-

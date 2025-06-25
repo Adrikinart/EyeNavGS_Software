@@ -30,9 +30,9 @@ std::tuple<double, double, double, double> calculateFOV(double fx, double fy, do
 }
 
 int main(int argc, char* argv[]) {
-    
+
     if (argc != 3) {
-        std::cerr<<"Usage: "<<argv[0]<<" <input JSON file> <output CSV file>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <input JSON file> <output CSV file>" << std::endl;
         return 1;
     }
     //Get the file paths
@@ -91,12 +91,12 @@ int main(int argc, char* argv[]) {
             << fov3 << ","
             << fov4 << ","
             << posX << ","
-            << posY << ","
-            << posZ << ","
-            << quaternion.w() << ","
-            << quaternion.z() << ","
+            << -posY << ","
+            << -posZ << ","
+            << quaternion.x() << ","
             << -quaternion.y() << ","
-            << -quaternion.x() << "\n";
+            << -quaternion.z() << ","
+            << quaternion.w() << "\n";
     }
 
     outputFile.close();

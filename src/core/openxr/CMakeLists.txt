@@ -28,7 +28,11 @@ target_link_libraries(${PROJECT_NAME}
 
 add_definitions(-DSIBR_OPENXR_EXPORTS -DBOOST_ALL_DYN_LINK)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${SIBR_FOLDER})
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    FOLDER ${SIBR_FOLDER}
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
 
 ## High level macro to install in an homogen way all our ibr targets
 include(install_runtime)

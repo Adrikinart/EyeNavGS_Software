@@ -905,7 +905,9 @@ namespace sibr
         viewLocateInfo.displayTime = m_lastFrameState.predictedDisplayTime;
         viewLocateInfo.space = m_playSpace;
 
-        XrViewState view_state = {.type = XR_TYPE_VIEW_STATE, .next = NULL};
+        XrViewState view_state;
+        view_state.type = XR_TYPE_VIEW_STATE;
+        view_state.next = NULL;
         result = xrLocateViews(m_session, &viewLocateInfo, &view_state, m_viewCount, &m_viewCount, views);
         // Scaling the position
         XrView* ptr = views;

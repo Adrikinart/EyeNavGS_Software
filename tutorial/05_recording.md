@@ -3,7 +3,7 @@
 ## 5.1 Checklist before each session
 
 - [ ] Base stations on, headset tracked (solid icon in SteamVR).
-- [ ] SteamVR is the active OpenXR runtime (`check_environment.ps1 -VROnly`).
+- [ ] SteamVR is the active OpenXR runtime (`powershell -ExecutionPolicy Bypass -File scripts\windows\check_environment.ps1 -VROnly`).
 - [ ] Participant calibrated ([step 3.5](03_vr_eye_tracking_setup.md#35-eye-calibration-each-participant-each-session)).
 - [ ] Scene folder ready; initialization values known ([step 4](04_scenes.md)).
 
@@ -29,13 +29,14 @@ Before launching the viewer, the script:
 |---|---|
 | `-Scene` | 3DGS model folder (mandatory). |
 | `-Participant` | Tag used in the output folder name. |
-| `-OutDir` | Output folder (default `recordings\<scene>\<participant>_<date>\`). |
+| `-OutDir` | Output folder (default `<repo>\recordings\<scene>\<participant>_<yyyyMMdd_HHmmss>\`, or `session_<...>` without `-Participant`). |
 | `-Duration` | > 0: automatic recording of N seconds. |
 | `-Downscale` | 1–8, divides the per-eye rendering resolution (higher = faster, [§5.5](#55-frame-rate--sampling-rate)). |
 | `-InitialPosition`, `-InitialQuaternion`, `-InitialScale` | Scene initialization ([step 4](04_scenes.md#scene-initialization-tilt-scale-start-position)). |
 | `-Iteration` | 3DGS iteration to load (default: the largest). |
 | `-EyeTracking` | `auto` (default), `htc`, `ext`, `fb`, `none`. |
 | `-SkipSRanipal` | Do not check or start SR_Runtime. |
+| `-Exe <path>` | Viewer to run (default `install\bin\SIBR_gaussianViewer_app.exe`). Needed for a `RelWithDebInfo` / `Debug` build (`..._rwdi.exe` / `..._d.exe`). |
 
 The output folder receives:
 
@@ -43,7 +44,7 @@ The output folder receives:
 - `viewer_console.log`, the full viewer output;
 - `session_info.txt`, with the arguments and environment.
 
-When you close the viewer, every new trace is checked with `check_trace.py` ([step 7](07_analysis.md)).
+When you close the viewer, every new trace is checked with `check_trace.py` ([step 7](07_analysis.md)), provided a real Python is found. Otherwise the script says so and you can run it by hand.
 
 ## 5.3 In the desktop window and in the headset
 
@@ -61,7 +62,9 @@ The desktop window mirrors both eyes. Its **"OpenXR"** panel shows:
   - rows are flushed every frame, so a crash loses at most one frame;
   - closing the window also closes the file properly.
 - While recording, a red **REC** line shows the file, the row count and the live % of valid gaze.
-- **Recording and Saving**: same as Start, plus one video per eye (`<scene>_left.mp4`, `<scene>_right.mp4`) and a CSV named `<scene>_output_<n>.csv`. This is heavy: it reads the textures back every frame.
+- **Recording and Saving**: same as Start, plus one video per eye (`<scene>_left.mp4`, `<scene>_right.mp4`) and a CSV named `<scene>_output_<n>.csv`.
+  - This is heavy: it reads the textures back every frame.
+  - The video names have **no index**: the next "Recording and Saving" or headset replay in the same folder overwrites them.
 - **Down scale factor** slider, the frame rate, the IPD, *Free world standing / Seated*, *Save VR configuration* (`vr.json` in the scene folder).
 
 In the headset, with the VIVE wands:
@@ -80,6 +83,7 @@ $env:XR_ENABLE_API_LAYERS = "XR_APILAYER_VIVE_facial_tracking"
 # 2. viewer
 cd install\bin
 .\SIBR_gaussianViewer_app.exe -m D:\scenes\truck --rendering-mode 2 --trace-dir D:\recordings\P01
+cd ..\..   # back to the repository root
 ```
 
 Viewer options for headset mode (`--rendering-mode 2`):
@@ -94,13 +98,15 @@ Viewer options for headset mode (`--rendering-mode 2`):
 | `--record-duration <s>` | With `--record-trace`: stop after N seconds. |
 | `--downscale <n>` | Per-eye resolution divider, 1–8. |
 
-Diagnostic environment variables:
+Diagnostic environment variables. Set them in PowerShell before launching the viewer; they apply to that PowerShell window:
 
-| Variable | Effect |
+| PowerShell | Effect |
 |---|---|
-| `EYENAVGS_EYE_TRACKING=fb\|htc\|ext\|none` | Force the eye-tracking backend. |
-| `XR_LOADER_DEBUG=info` | The OpenXR loader prints which API layers it loads. |
-| `EYENAVGS_GAZE_DEBUG=1` | Trace every OpenXR call of the frame loop (very verbose; shows where a runtime or layer crashes). |
+| `$env:EYENAVGS_EYE_TRACKING = "htc"` (or `fb`, `ext`, `none`) | Force the eye-tracking backend. The launcher sets it from `-EyeTracking` instead. |
+| `$env:XR_LOADER_DEBUG = "info"` | The OpenXR loader prints which API layers it loads. |
+| `$env:EYENAVGS_GAZE_DEBUG = "1"` | Trace every OpenXR call of the frame loop (very verbose; shows where a runtime or layer crashes). |
+
+Remove one with `Remove-Item Env:\EYENAVGS_GAZE_DEBUG`.
 
 ## 5.5 Frame rate = sampling rate
 

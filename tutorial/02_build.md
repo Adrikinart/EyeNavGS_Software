@@ -25,7 +25,8 @@ The script:
 | Option | Effect |
 |---|---|
 | `-Config Release` (default) / `RelWithDebInfo` / `Debug` | Build configuration. Debug is too slow for VR. |
-| `-Clean` | Delete `build\` first. Needed if you switch Visual Studio instance or generator. |
+| `-BuildDir <folder>` | Build folder, relative to the repository root (default `build`). |
+| `-Clean` | Delete the build folder first. Needed if you switch Visual Studio instance or generator. |
 | `-CudaVersion 12.6` | Force a CUDA version when several are installed. |
 | `-VsInstallPath <path>` | Force a Visual Studio instance. |
 
@@ -45,7 +46,7 @@ You can also open `build\sibr_projects.sln` in Visual Studio 2022, then build `A
 
 ## 2.3 Good to know
 
-- The old README option names `BUILD_SIBR_OPENXR` and `BUILD_gaussian_viewer` do not exist:
+- The option names `BUILD_SIBR_OPENXR` and `BUILD_gaussian_viewer` given by the upstream README (commit `87d02bf`) do not exist:
   - the OpenXR module is always built;
   - the viewer option is `BUILD_IBR_GAUSSIANVIEWER` (ON by default).
 - Harmless configure messages:

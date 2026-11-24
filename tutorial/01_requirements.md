@@ -38,7 +38,11 @@ Other versions may work. The constraints that **do** matter:
 
    Select the workload **"Desktop development with C++"**, including a **Windows 10/11 SDK**.
 
-   > **Already have Visual Studio 2026?** Install VS 2022 Build Tools next to it, or add the "MSVC v143" component to VS 2026. The build script picks a compatible instance automatically.
+   > **Already have Visual Studio 2026?** The simplest option is to install VS 2022 Build Tools next to it; the build script picks a compatible instance automatically. VS 2026 itself can work, but only if:
+   >
+   > - the extra "MSVC v143" component is added;
+   > - the CUDA installer has added its Visual Studio integration to VS 2026;
+   > - CMake is ≥ 4.2.
 2. **CUDA Toolkit 12.x** (12.4 or newer; 12.6 tested), installed **after** Visual Studio.
    - The CUDA installer adds its MSBuild integration (`CUDA 12.6.props`) only to the Visual Studio instances present at that moment.
    - If you installed Visual Studio later, re-run the CUDA installer: *Custom > Visual Studio Integration*.
@@ -46,14 +50,16 @@ Other versions may work. The constraints that **do** matter:
 4. **Steam**, **SteamVR**, and **VIVE Console for SteamVR** (free, from Steam). Details in [step 3](03_vr_eye_tracking_setup.md).
 5. *(Optional)* **Python 3.8+** for the analysis tools. `check_trace.py` only uses the standard library. Python is not needed to build.
 
-   > On a fresh Windows, `python` can be the *Microsoft Store stub*, which only opens the Store. Install a real Python (python.org, Anaconda, ...).
+   > On a fresh Windows, `python` can be the *Microsoft Store stub*, which only opens the Store. Install a real Python (python.org, Anaconda, or Python from the Microsoft Store). `py -3 ...` works when the python.org launcher is installed. The scripts test each candidate and ignore the stub.
 
 ## 1.4 Get the repository
 
 ```powershell
-git clone <URL of this repository>  EyeNavGS_Software
+git clone https://github.com/Adrikinart/EyeNavGS_Software.git EyeNavGS_Software
 cd EyeNavGS_Software
 ```
+
+All the commands of this tutorial are then run from this folder (the repository root).
 
 Keep the path short, without spaces or accents, e.g. `D:\EyeNavGS_Software`.
 

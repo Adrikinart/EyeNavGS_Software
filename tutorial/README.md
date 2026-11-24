@@ -21,7 +21,7 @@ They are recorded while a participant walks through a photorealistic 3D Gaussian
 | 8 | [Troubleshooting](08_troubleshooting.md) | when needed |
 | 9 | [What was changed in the code](09_code_changes.md) | for developers |
 
-**Fast path** (if your PC already has the tools of step 1):
+**Fast path** (if steps 1, 3 and 4 are done: tools installed, VR stack set up, a scene available):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\windows\check_environment.ps1     # what is missing?

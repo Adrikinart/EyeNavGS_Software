@@ -206,4 +206,9 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except (OSError, ValueError, IndexError, csv.Error) as error:
+        # unreadable file or malformed values: a format error, not "no valid gaze"
+        print(f"ERROR: {error}")
+        sys.exit(2)

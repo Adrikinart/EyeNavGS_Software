@@ -53,7 +53,10 @@ Write-Ok "Viewer: $Exe"
 
 if (-not (Test-Path $Scene)) { Fail "Scene folder not found: $Scene" }
 $Scene = (Resolve-Path $Scene).Path.TrimEnd("\")
-if (-not (Test-Path (Join-Path $Scene "cfg_args"))) { Fail "No 'cfg_args' in $Scene (is it a 3D Gaussian Splatting model folder?)" }
+foreach ($required in @("cfg_args", "cameras.json", "input.ply")) {
+    # cameras.json and input.ply are needed when the viewer falls back to the model folder (the usual case)
+    if (-not (Test-Path (Join-Path $Scene $required))) { Fail "No '$required' in $Scene (is it a complete 3D Gaussian Splatting model folder? see tutorial/04_scenes.md)" }
+}
 $plys = @(Get-ChildItem (Join-Path $Scene "point_cloud") -Directory -Filter "iteration_*" -ErrorAction SilentlyContinue |
           Where-Object { Test-Path (Join-Path $_.FullName "point_cloud.ply") })
 if (-not $plys) { Fail "No point_cloud\iteration_*\point_cloud.ply in $Scene" }
@@ -92,10 +95,15 @@ if (-not $SkipSRanipal -and $EyeTracking -in @("auto", "htc", "ext")) {
     } else {
         if ($sr.RunningVersion) {
             Write-Warn "An old SR_Runtime ($($sr.RunningVersion)) is running: it is incompatible with the VIVE OpenXR layer (the viewer would be killed). Stopping it."
-            Get-Process sr_runtime -ErrorAction SilentlyContinue | Stop-Process -Force
+            try {
+                Get-Process sr_runtime -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction Stop
+            } catch {
+                Fail ("Could not stop the running SR_Runtime ($($_.Exception.Message)). It may run with administrator rights: " +
+                      "exit it from its tray icon (right-click the robot icon > Exit) or run this script from an administrator PowerShell, then re-run.")
+            }
             Start-Sleep -Seconds 2
         }
-        Write-Host "Starting SR_Runtime $($sr.ViveVersion) ($($sr.ViveRuntime)) ..."
+        Write-Host "Starting SR_Runtime $($sr.ViveVersion) ($($sr.ViveRuntime)) - accept the UAC prompt if Windows shows one ..."
         if (Start-ViveSRRuntime $sr.ViveRuntime 60) { Write-Ok "SR_Runtime is ready (robot icon in the Windows notification area)" }
         else { Write-Warn "SR_Runtime did not report 'ready' within 60 s: eye tracking may not work" }
     }

@@ -3,17 +3,17 @@
 This repository is a **tutorial-ready fork** of the [EyeNavGS software](https://github.com/symmru/EyeNavGS_Software). EyeNavGS is a SIBR-based VR viewer for 3D Gaussian Splatting (3DGS) scenes with record-and-replay of user navigation. The fork adds:
 
 - **HTC VIVE Pro Eye eye tracking** (OpenXR `XR_HTC_eye_tracker` through SteamVR + VIVE Console). It records per-eye gaze, pupil diameter and eye openness. The original code only supported the Meta Quest Pro (`XR_FB_eye_tracking_social`).
-- **A build that works with current toolchains**: VS 2022 Build Tools (or VS 2026 + v143), CUDA 12.x, CMake 4.x.
+- **A build that works with current toolchains**: VS 2022 Build Tools (or VS 2026 with the v143 toolset and the CUDA integration), CUDA 12.x, CMake 4.x.
 - **Fixed recording bugs**: gaze lost after the first blink, values truncated to 3 decimals, wrong headers, sessions appended to old files, ...
 - **Scripts** that check a PC, build, and run a recording session.
 - **A step-by-step tutorial** from a blank Windows PC to validated CSV traces.
 
 ## Quick start
 
-From a PowerShell window, at the root of the cloned repository:
+From a PowerShell window (all commands after the `cd` are run from the repository root):
 
 ```powershell
-git clone <URL of this repository> EyeNavGS_Software
+git clone https://github.com/Adrikinart/EyeNavGS_Software.git EyeNavGS_Software
 cd EyeNavGS_Software
 
 # 1. What is missing on this PC? (read-only)
@@ -25,9 +25,11 @@ powershell -ExecutionPolicy Bypass -File scripts\windows\build_eyenavgs.ps1
 # 3. Record (headset on, participant calibrated); the trace is checked automatically at the end
 powershell -ExecutionPolicy Bypass -File scripts\windows\record_vive_pro_eye.ps1 -Scene D:\scenes\truck -Participant P01
 
-# 4. Check any trace
+# 4. Check any trace (needs a real Python 3.8+; "py -3" also works)
 python utils\CheckTrace\check_trace.py examples\sample_trace_vive_pro_eye.csv
 ```
+
+Step 3 assumes the one-time VR setup is done (SteamVR, VIVE Console, base stations, eye calibration: [tutorial step 3](tutorial/03_vr_eye_tracking_setup.md)) and a 3DGS scene is available ([step 4](tutorial/04_scenes.md)).
 
 ## Tutorial
 
@@ -86,7 +88,7 @@ utils/...               original EyeNavGS tools (gaze overlay, CSV<->JSON, world
 examples/               real sample trace (VIVE Pro Eye)
 src/core/openxr/        OpenXR HMD / input / eye tracking / recording (most changes are here)
 src/projects/gaussianviewer/  the 3DGS viewer application
-docs/ORIGINAL_README.md the original EyeNavGS README (desktop mode, replay, Meta Quest, utilities, SIBR)
+docs/ORIGINAL_README.md the original EyeNavGS README, lightly updated for this fork (desktop mode, replay, Meta Quest, utilities, SIBR)
 ```
 
 Generated folders, not versioned: `build/`, `install/`, `extlibs/`, `recordings/`.

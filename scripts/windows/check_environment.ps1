@@ -74,7 +74,8 @@ if (-not $VROnly) {
         }
         if ($vs -and -not $usable) {
             Fail "No Visual Studio instance can build with CUDA $($cuda.Version)" ("Install VS 2022 Build Tools (toolset v143), then re-run the CUDA $($cuda.Version) installer " +
-                 "(Custom > Visual Studio Integration). VS 2026 alone does not work: its MSVC 19.50 is rejected by CUDA 12.x")
+                 "(Custom > Visual Studio Integration). VS 2026 works only with the extra 'MSVC v143' component AND the CUDA integration " +
+                 "added to it, and CMake >= 4.2: its default MSVC 19.50 is rejected by CUDA 12.x")
         }
     }
 

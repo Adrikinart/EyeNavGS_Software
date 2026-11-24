@@ -10,7 +10,7 @@ Start with `powershell -ExecutionPolicy Bypass -File scripts\windows\check_envir
 | `C2065 'initial_sacle'` / `C7555` (designated initializers) | Upstream bugs | Fixed in this repository. |
 | nvcc: `unsupported Microsoft Visual Studio version` | MSVC ≥ 19.50 (VS 2026 toolset v145) with CUDA 12.x | Use toolset v143 (VS 2022 / Build Tools 2022). `build_eyenavgs.ps1` picks it. |
 | `No CUDA toolset found` | CUDA installed before Visual Studio | Re-run the CUDA installer > Visual Studio Integration. |
-| `The existing 'build' was configured with ...` | `build\` was configured with another Visual Studio | `build_eyenavgs.ps1 -Clean` |
+| `The existing 'build' was configured with ...` | `build\` was configured with another Visual Studio | `powershell -ExecutionPolicy Bypass -File scripts\windows\build_eyenavgs.ps1 -Clean` |
 | `python` opens the Microsoft Store | Store stub on the PATH | Install Python (python.org / Anaconda). It is not needed for the build. |
 | `running scripts is disabled on this system` | PowerShell execution policy | `powershell -ExecutionPolicy Bypass -File <script>` |
 
@@ -19,8 +19,11 @@ Start with `powershell -ExecutionPolicy Bypass -File scripts\windows\check_envir
 | Symptom | Cause | Fix |
 |---|---|---|
 | `Cannot determine type of dataset at /f:/...` | `cfg_args` points to the training PC | Harmless. |
-| Viewer exits silently a few seconds after the headset shows the scene; event log `0xc0000409 ucrtbase.dll` | VIVE layer (SRanipal client 1.3.6.5) talking to an **old SR_Runtime 1.3.2**: `SR_Logs\ViveSR_Runtime.log` shows `Error! Call_ViveSR_API` | Run VIVE Console's SR_Runtime 1.3.6.12 ([step 3.3](03_vr_eye_tracking_setup.md#33-the-sranipal-version-trap)); `record_vive_pro_eye.ps1` does it. |
-| Console: `XR_HTC_eye_tracker available: no` | VIVE layer disabled, or VIVE Console missing | [Step 3.4](03_vr_eye_tracking_setup.md#34-enable-the-vive-openxr-eye-tracking-layer). Check with `XR_LOADER_DEBUG=info` (`... succeeded loading layer XR_APILAYER_VIVE_facial_tracking`). |
+| Viewer exits silently a few seconds after the headset shows the scene; event log `0xc0000409 ucrtbase.dll` | VIVE layer (SRanipal client 1.3.6.5) talking to an **old SR_Runtime 1.3.2**: `SR_Logs\ViveSR_Runtime.log` shows a `Call_ViveSR_API` error (logged as `rror! Call_ViveSR_API`) | Run VIVE Console's SR_Runtime 1.3.6.12 ([step 3.3](03_vr_eye_tracking_setup.md#33-the-sranipal-version-trap)); `record_vive_pro_eye.ps1` does it. |
+| Launcher: `Could not stop the running SR_Runtime (... Access is denied ...)` | The old runtime runs with administrator rights | Exit it from its tray icon (right-click the robot > Exit), or run the script from an administrator PowerShell. |
+| Console: `XR_HTC_eye_tracker available: no` | VIVE layer disabled, or VIVE Console missing | [Step 3.4](03_vr_eye_tracking_setup.md#34-enable-the-vive-openxr-eye-tracking-layer). Check with `$env:XR_LOADER_DEBUG = "info"` before launching (look for `... succeeded loading layer XR_APILAYER_VIVE_facial_tracking`). |
+| Status `HTC eye tracker could not be created (SR_Runtime running? eye tracking enabled?)` | SRanipal not running, or eye tracking disabled in SRanipal | Start SR_Runtime 1.3.6.x ([step 3.3](03_vr_eye_tracking_setup.md#33-the-sranipal-version-trap)); enable eye tracking in its settings; restart the viewer. |
+| Status `eye tracking FAILED (exception in the runtime/API layer): see the console` | The eye-tracking layer threw an error | Read the `[EyeTracking]` lines in the console or `viewer_console.log`; restart SR_Runtime and the viewer. |
 | Status `headset NOT tracked` / SteamVR log `No base stations seen` | Base stations off or occluded | Power them on, check the line of sight, redo Room Setup. |
 | Status `waiting for the application to be focused` | SteamVR dashboard or calibration overlay open | Close the dashboard. |
 | `GazeValid` mostly 0 | Headset not worn or loose, not calibrated, eyes not visible (glasses, lashes, make-up) | Recalibrate; adjust strap and IPD. Short 0-runs are blinks and are normal. |
@@ -40,7 +43,7 @@ Start with `powershell -ExecutionPolicy Bypass -File scripts\windows\check_envir
 | SRanipal 1.3.2 | `%USERPROFILE%\AppData\LocalLow\HTC Corporation\SR_Logs\` |
 | Crashes | Windows Event Viewer > Windows Logs > Application ("Application Error") |
 
-For a crash inside a runtime or layer, run the viewer with `EYENAVGS_GAZE_DEBUG=1`. The last `[xr-trace] ... ->` line shows the OpenXR call that did not return.
+For a crash inside a runtime or layer, run `$env:EYENAVGS_GAZE_DEBUG = "1"` in PowerShell, then launch the viewer from the same window. The last `[xr-trace] ... ->` line shows the OpenXR call that did not return.
 
 ---
 [← 7. Analysis](07_analysis.md) · [Tutorial index](README.md) · [9. Code changes →](09_code_changes.md)

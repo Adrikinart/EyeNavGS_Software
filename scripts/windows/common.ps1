@@ -203,10 +203,16 @@ function Get-SRRuntimeInfo {
 }
 
 function Start-ViveSRRuntime([string]$RuntimePath, [int]$TimeoutSeconds = 60) {
-    # Start the SR_Runtime shipped with VIVE Console and wait until its log says it is ready
+    # Start the SR_Runtime shipped with VIVE Console and wait until its log says it is ready.
+    # sr_runtime.exe asks for the highest available privileges: Windows may show a UAC prompt.
     $logs = Get-SRRuntimeLogPaths
     $since = Get-Date
-    Start-Process -FilePath $RuntimePath -WorkingDirectory (Split-Path $RuntimePath)
+    try {
+        Start-Process -FilePath $RuntimePath -WorkingDirectory (Split-Path $RuntimePath)
+    } catch {
+        Write-Warn "Could not start $RuntimePath ($($_.Exception.Message)). If a UAC prompt was declined, accept it or start it by hand."
+        return $false
+    }
     for ($i = 0; $i -lt $TimeoutSeconds; $i++) {
         Start-Sleep -Seconds 1
         if (-not (Test-Path $logs.New)) { continue }
@@ -218,10 +224,19 @@ function Start-ViveSRRuntime([string]$RuntimePath, [int]$TimeoutSeconds = 60) {
     return $false
 }
 
+function Test-PythonExe([string]$exe) {
+    # The Microsoft Store *stub* (WindowsApps\python.exe without Python installed) fails when run with arguments;
+    # a real Python (python.org, Anaconda, or Python installed from the Store) prints its executable path.
+    try {
+        $out = & $exe -c "import sys; print(sys.executable)" 2>$null | Select-Object -First 1
+        return ($LASTEXITCODE -eq 0 -and $out -and (Test-Path $out))
+    } catch { return $false }
+}
+
 function Find-Python {
     foreach ($candidate in @("python", "python3")) {
         $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
-        if ($cmd -and $cmd.Source -notmatch "WindowsApps") { return $cmd.Source }
+        if ($cmd -and (Test-PythonExe $cmd.Source)) { return $cmd.Source }
     }
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($py) {

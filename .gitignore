@@ -43,3 +43,5 @@ Sessionx.vim
 tags
 # Persistent undo
 [._]*.un~
+# EyeNavGS tutorial: session outputs of scripts/windows/record_vive_pro_eye.ps1
+/recordings/

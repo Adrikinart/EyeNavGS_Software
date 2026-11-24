@@ -1,0 +1,37 @@
+# Lightweight checks of the tutorial tooling (the viewer itself needs CUDA + a VR headset and is not built here).
+name: tutorial-checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  scripts-and-checker:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse the PowerShell scripts with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $failed = 0
+          Get-ChildItem scripts/windows -Filter *.ps1 | ForEach-Object {
+            $file = $_
+            $errs = $null; $tokens = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errs)
+            foreach ($e in $errs) { Write-Host "::error file=$($file.Name),line=$($e.Extent.StartLineNumber)::$($e.Message)"; $failed++ }
+            # Windows PowerShell 5.1 reads BOM-less files as ANSI: keep the scripts ASCII-only
+            $nonAscii = @([System.IO.File]::ReadAllBytes($file.FullName) | Where-Object { $_ -gt 127 }).Count
+            if ($nonAscii -gt 0) { Write-Host "::error file=$($file.Name)::$nonAscii non-ASCII byte(s)"; $failed++ }
+            Write-Host "$($file.Name): parsed"
+          }
+          exit $failed
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run the trace checker on the sample trace
+        run: |
+          python -m py_compile utils/CheckTrace/check_trace.py
+          python utils/CheckTrace/check_trace.py examples/sample_trace_vive_pro_eye.csv

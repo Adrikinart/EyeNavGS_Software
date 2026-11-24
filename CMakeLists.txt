@@ -9,6 +9,16 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.22)
 
+## CMake >= 4.0 removed compatibility with cmake_minimum_required(VERSION < 3.5).
+## Several third-party libraries fetched into extlibs/ (e.g. xatlas, glm inside the CudaRasterizer)
+## still declare such old minimums, which makes the configure step fail with
+## "Compatibility with CMake < 3.5 has been removed from CMake".
+## Setting the policy floor here (unless the user already passed -DCMAKE_POLICY_VERSION_MINIMUM=...)
+## lets those sub-projects configure without patching them.
+if(NOT CMAKE_VERSION VERSION_LESS 4.0 AND NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+	set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
 set (CMAKE_SYSTEM_VERSION 10.0.15063.0 CACHE INTERNAL "Cmake system version" FORCE)
 PROJECT(sibr_projects)
 

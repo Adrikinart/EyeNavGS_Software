@@ -50,6 +50,11 @@ namespace sibr {
 		Arg<int> device = {"device", 0, "CUDA device index"};
 		Arg<bool> loadImages = { "load_images", "Whether or not to load images for scene overview."};
 		Arg<bool> noInterop = { "no_interop", "Don't try to use interop (may be required for unconventional OpenGL setups, like WSL)" };
+		// EyeNavGS headset trace recording (--rendering-mode 2)
+		Arg<std::string> traceDir = { "trace-dir", "", "(headset mode) directory where trace CSV/video files are written (default: working directory)" };
+		Arg<bool> recordTrace = { "record-trace", "(headset mode) start trace recording automatically once the app is focused in the headset" };
+		Arg<float> recordDuration = { "record-duration", 0.0f, "(headset mode, with --record-trace) stop the recording after this many seconds (0: until 'End Trace Recording' or exit)" };
+		Arg<int> vrDownscale = { "downscale", 1, "(headset mode) divide the per-eye rendering resolution by this factor (1-8) to increase the frame rate (= trace sampling rate)" };
 	};
 
 }

@@ -64,6 +64,7 @@
 #include <openxr/openxr_platform.h>
 
 #include <core/openxr/OpenXRInput.hpp>
+#include <core/openxr/OpenXRHTCEyeTracker.h>
 
 using namespace Eigen;
 
@@ -99,6 +100,45 @@ namespace sibr
             SYNCHRONIZED,
             ENDING,
             FAILURE // ERROR type cannot be used in Windows
+        };
+
+        /**
+         * Eye tracking backend selected at init(), depending on the extensions exposed by the
+         * OpenXR runtime and its API layers:
+         * - FB_EYE_TRACKING_SOCIAL: XR_FB_eye_tracking_social (Meta Quest Pro), one gaze per eye
+         * - HTC_EYE_TRACKER: XR_HTC_eye_tracker (HTC VIVE Pro Eye through SteamVR + the
+         *   "VIVE OpenXR Facial tracking" API layer of VIVE Console), one gaze per eye + pupil + openness
+         * - EXT_EYE_GAZE_INTERACTION: XR_EXT_eye_gaze_interaction (Varjo, Pico, HP Omnicept, ...),
+         *   one combined gaze for both eyes
+         * Automatic choice order: FB, HTC, EXT. It can be forced with the environment variable
+         * EYENAVGS_EYE_TRACKING=fb|htc|ext|none
+         */
+        enum class EyeTrackingBackend
+        {
+            NONE = 0,
+            FB_EYE_TRACKING_SOCIAL,
+            EXT_EYE_GAZE_INTERACTION,
+            HTC_EYE_TRACKER
+        };
+
+        /**
+         * Eye gaze for one view, in the same space (and with the same initial scale adjustment)
+         * as the eye poses returned by getPosePosition()/getPoseQuaternion().
+         * The gaze direction is the -Z axis of the pose orientation (OpenXR convention).
+         */
+        struct GazeSample
+        {
+            bool valid = false;   ///< a gaze pose is available for this frame
+            bool tracked = false; ///< the pose comes from an actual eye-tracker measurement (not extrapolated/stale)
+            XrPosef pose{ {0.f, 0.f, 0.f, 1.f}, {0.f, 0.f, 0.f} };
+            XrTime sampleTime = 0; ///< time of the eye tracker sample (0 if unknown)
+            // Extra eye data (only with XR_HTC_eye_tracker)
+            bool pupilDiameterValid = false;
+            float pupilDiameterMm = 0.f;       ///< pupil diameter in millimeters
+            bool pupilPositionValid = false;
+            XrVector2f pupilPosition{ 0.f, 0.f }; ///< normalized pupil position in the sensor area ([0,1], +X right, +Y up)
+            bool opennessValid = false;
+            float openness = 0.f;              ///< eye openness [0,1] (0 = closed)
         };
 
         struct FrameRefreshReport
@@ -339,6 +379,28 @@ namespace sibr
         }
         bool startEyeTracker();
 
+        /** @return the eye tracking backend selected at init() */
+        EyeTrackingBackend getEyeTrackingBackend() const { return m_eyeTrackingBackend; }
+
+        /** @return a short name of the eye tracking backend (also written in the traces) */
+        const char* getEyeTrackingBackendName() const;
+
+        /**
+         * @return a human readable eye tracking status for the last frame, e.g. to diagnose why no gaze
+         *         is delivered (no extension / action inactive / no valid sample / valid)
+         * @param ok: set to true when a valid gaze is available
+         */
+        std::string getEyeTrackingStatus(bool& ok) const;
+
+        /**
+         * @brief Return the eye gaze of the given view for the last frame (updated by waitNextFrame())
+         * With XR_EXT_eye_gaze_interaction both views share the same (combined) gaze.
+         */
+        const GazeSample& getGazeSample(Eye eye) const;
+
+        /** @return the predicted display time (XrTime, ns) of the last frame returned by xrWaitFrame */
+        XrTime getPredictedDisplayTime() const { return m_lastFrameState.predictedDisplayTime; }
+
         XrEyeTrackerFB eyeTracker = XR_NULL_HANDLE;
 
         XrPosef initial_adjustment = {
@@ -358,7 +420,23 @@ namespace sibr
         XrReferenceSpaceType m_playSpaceType;
 
         // Last frame state updated after a successful xrWaitFrame call
-        XrFrameState m_lastFrameState;
+        XrFrameState m_lastFrameState{ XR_TYPE_FRAME_STATE };
+
+        // Eye tracking
+        EyeTrackingBackend m_eyeTrackingBackend = EyeTrackingBackend::NONE;
+        GazeSample m_gaze[2];
+        XrEyeTrackerHTC m_htcEyeTracker = XR_NULL_HANDLE;
+        bool m_htcCreateAttempted = false;
+        bool createHtcEyeTracker();
+        bool m_eyeTrackingFailed = false;        ///< the eye tracking API threw/failed fatally: stop querying it
+        XrViewStateFlags m_lastViewStateFlags = 0; ///< validity of the head pose of the last frame
+        bool m_gazeQueryAllowed = false;         ///< gaze is only queried when focused and with a valid head pose (for >= 1 s)
+        std::chrono::steady_clock::time_point m_gazeConditionsSince{}; ///< since when focused + head tracked
+        bool isFocused() const { return m_currentState == XR_SESSION_STATE_FOCUSED; }
+
+        // Apply the initial scale adjustment (around the initial position) to a position located in the play space
+        XrVector3f applyInitialScale(const XrVector3f& p) const;
+        void updateEyeGazes();
 
         // Store the current XR Session state
         XrSessionState m_currentState = XR_SESSION_STATE_UNKNOWN;

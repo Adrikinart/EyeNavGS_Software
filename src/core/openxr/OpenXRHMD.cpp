@@ -34,6 +34,40 @@ namespace sibr
     static PFN_xrCreateEyeTrackerFB xrCreateEyeTrackerFB_ = NULL;
     static PFN_xrDestroyEyeTrackerFB xrDestroyEyeTrackerFB_ = NULL;
     static PFN_xrGetEyeGazesFB xrGetEyeGazesFB_ = NULL;
+    // XR_HTC_eye_tracker (VIVE Pro Eye through the VIVE OpenXR facial tracking API layer)
+    static PFN_xrCreateEyeTrackerHTC xrCreateEyeTrackerHTC_ = NULL;
+    static PFN_xrDestroyEyeTrackerHTC xrDestroyEyeTrackerHTC_ = NULL;
+    static PFN_xrGetEyeGazeDataHTC xrGetEyeGazeDataHTC_ = NULL;
+    static PFN_xrGetEyePupilDataHTC xrGetEyePupilDataHTC_ = NULL;
+    static PFN_xrGetEyeGeometricDataHTC xrGetEyeGeometricDataHTC_ = NULL;
+
+    // Look up an extension function, trying alternative names (the VIVE layer manifest and its
+    // implementation do not use the same names, e.g. xrGetEyeGazesHTC vs xrGetEyeGazeDataHTC)
+    static PFN_xrVoidFunction getProcAddress(XrInstance instance, std::initializer_list<const char*> names)
+    {
+        for (const char* name : names)
+        {
+            PFN_xrVoidFunction function = NULL;
+            if (XR_SUCCEEDED(xrGetInstanceProcAddr(instance, name, &function)) && function != NULL)
+                return function;
+        }
+        return NULL;
+    }
+
+    static bool load_htc_eye_tracker_function_pointers(XrInstance instance)
+    {
+        xrCreateEyeTrackerHTC_ = (PFN_xrCreateEyeTrackerHTC)getProcAddress(instance, { "xrCreateEyeTrackerHTC" });
+        xrDestroyEyeTrackerHTC_ = (PFN_xrDestroyEyeTrackerHTC)getProcAddress(instance, { "xrDestroyEyeTrackerHTC" });
+        xrGetEyeGazeDataHTC_ = (PFN_xrGetEyeGazeDataHTC)getProcAddress(instance, { "xrGetEyeGazeDataHTC", "xrGetEyeGazesHTC" });
+        xrGetEyePupilDataHTC_ = (PFN_xrGetEyePupilDataHTC)getProcAddress(instance, { "xrGetEyePupilDataHTC", "xrGetPupilDatasHTC" });
+        xrGetEyeGeometricDataHTC_ = (PFN_xrGetEyeGeometricDataHTC)getProcAddress(instance, { "xrGetEyeGeometricDataHTC", "xrGetEyeGeometricDatasHTC" });
+        SIBR_LOG << "[EyeTracking] XR_HTC_eye_tracker functions: create " << (xrCreateEyeTrackerHTC_ ? "ok" : "MISSING")
+                 << ", destroy " << (xrDestroyEyeTrackerHTC_ ? "ok" : "MISSING")
+                 << ", gaze " << (xrGetEyeGazeDataHTC_ ? "ok" : "MISSING")
+                 << ", pupil " << (xrGetEyePupilDataHTC_ ? "ok" : "missing")
+                 << ", geometric " << (xrGetEyeGeometricDataHTC_ ? "ok" : "missing") << std::endl;
+        return xrCreateEyeTrackerHTC_ && xrDestroyEyeTrackerHTC_ && xrGetEyeGazeDataHTC_;
+    }
     static PFN_xrGetOpenGLGraphicsRequirementsKHR pfnGetOpenGLGraphicsRequirementsKHR = NULL;
 #if defined(XR_USE_TIMESPEC)
     static PFN_xrConvertTimespecTimeToTimeKHR pfnConvertTimespecTimeToTimeKHR = NULL;
@@ -41,16 +75,15 @@ namespace sibr
     static PFN_xrConvertWin32PerformanceCounterToTimeKHR pfnConvertWin32PerformanceCounterToTimeKHR = NULL;
 #endif
 
-    bool eyetracking_supported = false;
     static bool
-    load_extension_function_pointers(XrInstance instance)
+    load_extension_function_pointers(XrInstance instance, bool loadFbEyeTracking)
     {
         XrResult result =
             xrGetInstanceProcAddr(instance, "xrGetOpenGLGraphicsRequirementsKHR",
                                   (PFN_xrVoidFunction *)&pfnGetOpenGLGraphicsRequirementsKHR);
         if (!xrCheck(instance, result, "Failed to get OpenGL graphics requirements function!"))
             return false;
-        if (eyetracking_supported) {
+        if (loadFbEyeTracking) {
             result =
                 xrGetInstanceProcAddr(
                     instance, "xrCreateEyeTrackerFB", (PFN_xrVoidFunction*)(&xrCreateEyeTrackerFB_));
@@ -122,8 +155,7 @@ namespace sibr
 
     OpenXRHMD::~OpenXRHMD()
     {
-        if (eyetracking_supported)
-            xrDestroyEyeTrackerFB_(eyeTracker);
+        // Note: the FB eye tracker (if any) is destroyed in closeSession(), while its session still exists
         closeSession();
         terminate();
     }
@@ -318,16 +350,8 @@ namespace sibr
             ext_props[i].next = NULL;
         }
 
-        std::vector<const char *> expectedExtensions = {
-            XR_KHR_OPENGL_ENABLE_EXTENSION_NAME,
-            XR_FB_EYE_TRACKING_SOCIAL_EXTENSION_NAME,
-#if defined(XR_USE_PLATFORM_WIN32)
-            XR_KHR_WIN32_CONVERT_PERFORMANCE_COUNTER_TIME_EXTENSION_NAME,
-#elif defined(XR_USE_TIMESPEC)
-            XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME,
-#endif
-        };
-        std::vector<const char*> expectedExtensions_0 = {
+        // Extensions always required
+        std::vector<const char *> enabledExtensions = {
             XR_KHR_OPENGL_ENABLE_EXTENSION_NAME,
 #if defined(XR_USE_PLATFORM_WIN32)
             XR_KHR_WIN32_CONVERT_PERFORMANCE_COUNTER_TIME_EXTENSION_NAME,
@@ -335,12 +359,15 @@ namespace sibr
             XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME,
 #endif
         };
-        
+
         result = xrEnumerateInstanceExtensionProperties(NULL, ext_count, &ext_count, ext_props);
         if (!xrCheck(NULL, result, "Failed to enumerate extension properties"))
             return false;
 
         bool opengl_supported = false;
+        bool fbEyeTrackingAvailable = false;
+        bool extEyeGazeAvailable = false;
+        bool htcEyeTrackerAvailable = false;
 
         if (m_printRuntimeExtensions)
             SIBR_LOG << "Runtime supports " << ext_count << " extensions" << std::endl;
@@ -353,7 +380,11 @@ namespace sibr
                 opengl_supported = true;
             }
             if (strcmp(XR_FB_EYE_TRACKING_SOCIAL_EXTENSION_NAME, ext_props[i].extensionName) == 0)
-                eyetracking_supported = true;
+                fbEyeTrackingAvailable = true;
+            if (strcmp(XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME, ext_props[i].extensionName) == 0)
+                extEyeGazeAvailable = true;
+            if (strcmp(XR_HTC_EYE_TRACKER_EXTENSION_NAME, ext_props[i].extensionName) == 0)
+                htcEyeTrackerAvailable = true;
         }
         free(ext_props);
 
@@ -364,10 +395,79 @@ namespace sibr
             return false;
         }
 
+        // Select the eye tracking backend:
+        //  - XR_FB_eye_tracking_social (Meta Quest Pro): per-eye gaze, used by the original EyeNavGS dataset
+        //  - XR_EXT_eye_gaze_interaction (HTC VIVE Pro Eye via VIVE Console/SteamVR, Varjo, ...): combined gaze
+        // The environment variable EYENAVGS_EYE_TRACKING=fb|ext|none forces a choice (when available).
+        SIBR_LOG << "[EyeTracking] " << XR_FB_EYE_TRACKING_SOCIAL_EXTENSION_NAME << " available: " << (fbEyeTrackingAvailable ? "yes" : "no")
+                 << ", " << XR_HTC_EYE_TRACKER_EXTENSION_NAME << " available: " << (htcEyeTrackerAvailable ? "yes" : "no")
+                 << ", " << XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME << " available: " << (extEyeGazeAvailable ? "yes" : "no") << std::endl;
+        if (!htcEyeTrackerAvailable && !fbEyeTrackingAvailable)
+        {
+            SIBR_LOG << "[EyeTracking] Note: for the HTC VIVE Pro Eye, enable the 'VIVE OpenXR Facial tracking' API layer "
+                     << "(SteamVR > Settings > OpenXR > Manage OpenXR API layers) to get XR_HTC_eye_tracker." << std::endl;
+        }
+        std::string eyeTrackingPreference = "auto";
+        {
+#ifdef _WIN32
+            char *envValue = nullptr;
+            size_t envLength = 0;
+            if (_dupenv_s(&envValue, &envLength, "EYENAVGS_EYE_TRACKING") == 0 && envValue != nullptr)
+            {
+                eyeTrackingPreference = envValue;
+                free(envValue);
+            }
+#else
+            const char *envValue = std::getenv("EYENAVGS_EYE_TRACKING");
+            if (envValue != nullptr)
+                eyeTrackingPreference = envValue;
+#endif
+            if (eyeTrackingPreference != "auto")
+                SIBR_LOG << "[EyeTracking] EYENAVGS_EYE_TRACKING=" << eyeTrackingPreference << std::endl;
+        }
+        m_eyeTrackingBackend = EyeTrackingBackend::NONE;
+        if (eyeTrackingPreference == "none")
+        {
+            m_eyeTrackingBackend = EyeTrackingBackend::NONE;
+        }
+        else if (eyeTrackingPreference == "ext")
+        {
+            if (extEyeGazeAvailable)
+                m_eyeTrackingBackend = EyeTrackingBackend::EXT_EYE_GAZE_INTERACTION;
+        }
+        else if (eyeTrackingPreference == "fb")
+        {
+            if (fbEyeTrackingAvailable)
+                m_eyeTrackingBackend = EyeTrackingBackend::FB_EYE_TRACKING_SOCIAL;
+        }
+        else if (eyeTrackingPreference == "htc")
+        {
+            if (htcEyeTrackerAvailable)
+                m_eyeTrackingBackend = EyeTrackingBackend::HTC_EYE_TRACKER;
+        }
+        else // auto
+        {
+            if (fbEyeTrackingAvailable)
+                m_eyeTrackingBackend = EyeTrackingBackend::FB_EYE_TRACKING_SOCIAL;
+            else if (htcEyeTrackerAvailable)
+                m_eyeTrackingBackend = EyeTrackingBackend::HTC_EYE_TRACKER;
+            else if (extEyeGazeAvailable)
+                m_eyeTrackingBackend = EyeTrackingBackend::EXT_EYE_GAZE_INTERACTION;
+        }
+        if (m_eyeTrackingBackend == EyeTrackingBackend::FB_EYE_TRACKING_SOCIAL)
+            enabledExtensions.push_back(XR_FB_EYE_TRACKING_SOCIAL_EXTENSION_NAME);
+        else if (m_eyeTrackingBackend == EyeTrackingBackend::HTC_EYE_TRACKER)
+            enabledExtensions.push_back(XR_HTC_EYE_TRACKER_EXTENSION_NAME);
+        else if (m_eyeTrackingBackend == EyeTrackingBackend::EXT_EYE_GAZE_INTERACTION)
+            enabledExtensions.push_back(XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME);
+        else
+            SIBR_WRG << "[EyeTracking] No eye tracking extension available/selected: gaze columns will be recorded as identity (GazeValid=0)" << std::endl;
+        SIBR_LOG << "[EyeTracking] Selected backend: " << getEyeTrackingBackendName() << std::endl;
+
         if (m_printRuntimeExtensions)
         {
             SIBR_LOG << "Enable following extensions:" << std::endl;
-            for (auto ext : expectedExtensions)
+            for (auto ext : enabledExtensions)
             {
                 SIBR_LOG << "\t" << ext << std::endl;
             }
@@ -386,15 +486,8 @@ namespace sibr
         instanceCreateInfo.enabledApiLayerCount = 0;
         instanceCreateInfo.enabledApiLayerNames = NULL;
 
-        if (eyetracking_supported) {
-            instanceCreateInfo.enabledExtensionCount = (uint32_t)expectedExtensions.size();
-            instanceCreateInfo.enabledExtensionNames = expectedExtensions.data();
-        }
-        else {
-            SIBR_LOG << "Eyetracking is not supported by current device!\n";
-            instanceCreateInfo.enabledExtensionCount = (uint32_t)expectedExtensions_0.size();
-            instanceCreateInfo.enabledExtensionNames = expectedExtensions_0.data();
-        }
+        instanceCreateInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
+        instanceCreateInfo.enabledExtensionNames = enabledExtensions.data();
 
         stringCopy(instanceCreateInfo.applicationInfo.applicationName, m_applicationName.c_str(),
             XR_MAX_APPLICATION_NAME_SIZE);
@@ -406,8 +499,13 @@ namespace sibr
         
 
 
-        if (!load_extension_function_pointers(m_instance))
+        if (!load_extension_function_pointers(m_instance, m_eyeTrackingBackend == EyeTrackingBackend::FB_EYE_TRACKING_SOCIAL))
             return false;
+        if (m_eyeTrackingBackend == EyeTrackingBackend::HTC_EYE_TRACKER && !load_htc_eye_tracker_function_pointers(m_instance))
+        {
+            SIBR_WRG << "[EyeTracking] XR_HTC_eye_tracker functions not found: eye tracking disabled" << std::endl;
+            m_eyeTrackingBackend = EyeTrackingBackend::NONE;
+        }
 
         // Get runtime name and version
         if (!getRuntimeNameAndVersion(m_instance, m_runtimeName, m_runtimeVersion))
@@ -425,6 +523,55 @@ namespace sibr
 
         if (m_printSystemProperties)
             printSystemProperties(m_instance, m_systemId);
+
+        if (m_eyeTrackingBackend == EyeTrackingBackend::HTC_EYE_TRACKER)
+        {
+            XrSystemEyeTrackingPropertiesHTC htcProperties{ XR_TYPE_SYSTEM_EYE_TRACKING_PROPERTIES_HTC };
+            htcProperties.next = NULL;
+            htcProperties.supportsEyeTracking = XR_FALSE;
+            XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES };
+            systemProperties.next = &htcProperties;
+            result = xrGetSystemProperties(m_instance, m_systemId, &systemProperties);
+            if (XR_SUCCEEDED(result))
+            {
+                SIBR_LOG << "[EyeTracking] System '" << systemProperties.systemName << "': XR_HTC_eye_tracker supportsEyeTracking = "
+                         << (htcProperties.supportsEyeTracking ? "true" : "false") << std::endl;
+                if (!htcProperties.supportsEyeTracking)
+                    SIBR_WRG << "[EyeTracking] The VIVE layer reports no eye tracking support (SRanipal not ready, eye tracking disabled, or not calibrated?). "
+                             << "The eye tracker will be created anyway; check the GazeValid column." << std::endl;
+            }
+            else
+            {
+                xrCheck(m_instance, result, "Failed to get system properties for XR_HTC_eye_tracker");
+            }
+        }
+
+        if (m_eyeTrackingBackend == EyeTrackingBackend::EXT_EYE_GAZE_INTERACTION)
+        {
+            // Ask the system whether eye gaze interaction is actually supported
+            XrSystemEyeGazeInteractionPropertiesEXT eyeGazeProperties{ XR_TYPE_SYSTEM_EYE_GAZE_INTERACTION_PROPERTIES_EXT };
+            eyeGazeProperties.next = NULL;
+            eyeGazeProperties.supportsEyeGazeInteraction = XR_FALSE;
+            XrSystemProperties systemProperties{ XR_TYPE_SYSTEM_PROPERTIES };
+            systemProperties.next = &eyeGazeProperties;
+            result = xrGetSystemProperties(m_instance, m_systemId, &systemProperties);
+            if (XR_SUCCEEDED(result))
+            {
+                SIBR_LOG << "[EyeTracking] System '" << systemProperties.systemName << "': supportsEyeGazeInteraction = "
+                         << (eyeGazeProperties.supportsEyeGazeInteraction ? "true" : "false") << std::endl;
+                if (!eyeGazeProperties.supportsEyeGazeInteraction)
+                {
+                    // Keep the action anyway: some layers report false until the eye tracker is ready.
+                    // The GazeValid column of the trace tells whether gaze was really delivered.
+                    SIBR_WRG << "[EyeTracking] The runtime reports no eye gaze support (eye tracker/SRanipal not running or not calibrated?). "
+                             << "Gaze will be recorded only if the runtime delivers it." << std::endl;
+                }
+            }
+            else
+            {
+                xrCheck(m_instance, result, "Failed to get system properties for eye gaze interaction");
+            }
+        }
 
         result = xrEnumerateViewConfigurationViews(m_instance, m_systemId, m_viewType, 0, &m_viewCount, NULL);
         if (!xrCheck(m_instance, result, "Failed to get view configuration view count!"))
@@ -506,7 +653,8 @@ namespace sibr
             return false;
         }
 
-        m_xrInput = std::make_unique<OpenXRInput>(m_instance, m_session, m_playSpace);
+        m_xrInput = std::make_unique<OpenXRInput>(m_instance, m_session, m_playSpace,
+                                                  m_eyeTrackingBackend == EyeTrackingBackend::EXT_EYE_GAZE_INTERACTION);
 
         return synchronizeSession();
     }
@@ -678,11 +826,13 @@ namespace sibr
                 {
                     m_status = SessionStatus::FAILURE;
                 }
+                break; // (upstream fell through and decoded this event as a session state change)
             }
             case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
             {
                 XrEventDataSessionStateChanged *event = (XrEventDataSessionStateChanged *)&runtimeEvent;
                 updateCurrentSessionState(event->state);
+                break;
             }
             case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
             {
@@ -876,7 +1026,9 @@ namespace sibr
         XrFrameWaitInfo frameWaitInfo;
         frameWaitInfo.type = XR_TYPE_FRAME_WAIT_INFO;
         frameWaitInfo.next = NULL;
+        XR_TRACE("xrWaitFrame ->");
         XrResult result = xrWaitFrame(m_session, &frameWaitInfo, &m_lastFrameState);
+        XR_TRACE("xrWaitFrame <- " << result);
         if (!xrCheck(m_instance, result, "xrWaitFrame() failed"))
             return false;
 
@@ -905,43 +1057,287 @@ namespace sibr
         viewLocateInfo.displayTime = m_lastFrameState.predictedDisplayTime;
         viewLocateInfo.space = m_playSpace;
 
-        XrViewState view_state = {.type = XR_TYPE_VIEW_STATE, .next = NULL};
+        // Note: avoid C++20 designated initializers, the project is compiled in C++14 with MSVC
+        XrViewState view_state{XR_TYPE_VIEW_STATE};
+        view_state.next = NULL;
+        XR_TRACE("xrLocateViews ->");
         result = xrLocateViews(m_session, &viewLocateInfo, &view_state, m_viewCount, &m_viewCount, views);
-        // Scaling the position
-        XrView* ptr = views;
-        for (uint32_t i = 0; i < m_viewCount; i++) {
-            ptr->pose.position.x = initial_adjustment.position.x + (ptr->pose.position.x - initial_adjustment.position.x) * scale;
-            ptr->pose.position.y = initial_adjustment.position.y + (ptr->pose.position.y - initial_adjustment.position.y) * scale;
-            ptr->pose.position.z = initial_adjustment.position.z + (ptr->pose.position.z - initial_adjustment.position.z) * scale;
-            ptr++;
-        }
+        XR_TRACE("xrLocateViews <- " << result);
         if (!xrCheck(m_instance, result, "Could not locate views"))
             return false;
-        if (eyetracking_supported) {
-            //update eye tracking gaze information
-            eyeGazes.next = nullptr;
-            gazesInfo.baseSpace = m_playSpace;
-
-            result = xrGetEyeGazesFB_(eyeTracker, &gazesInfo, &eyeGazes);
-            XrEyeGazeFB* G_ptr = eyeGazes.gaze;
-            for (uint32_t i = 0; i < 2; i++) {
-                G_ptr[i].gazePose.position.x = initial_adjustment.position.x + (G_ptr[i].gazePose.position.x - initial_adjustment.position.x) * scale;
-                G_ptr[i].gazePose.position.y = initial_adjustment.position.y + (G_ptr[i].gazePose.position.y - initial_adjustment.position.y) * scale;
-                G_ptr[i].gazePose.position.z = initial_adjustment.position.z + (G_ptr[i].gazePose.position.z - initial_adjustment.position.z) * scale;
-            }
-            // if (!xrCheck(m_instance, result, "failed to get eye gaze data!"))
-              //   return false;
+        // Scaling the position
+        for (uint32_t i = 0; i < m_viewCount; i++) {
+            views[i].pose.position = applyInitialScale(views[i].pose.position);
         }
-        
 
+        // Eye gaze is only queried when the application is focused and the head pose is valid:
+        // gaze in world space is meaningless otherwise, and the VIVE eye tracking layer was observed to
+        // abort() the process when its gaze was located while the headset was not tracked.
+        // The conditions must hold for 1 s (warm-up: the headset leaves standby, SRanipal starts its eye cameras).
+        m_lastViewStateFlags = view_state.viewStateFlags;
+        const XrViewStateFlags headValid = XR_VIEW_STATE_ORIENTATION_VALID_BIT | XR_VIEW_STATE_POSITION_VALID_BIT;
+        const bool gazeConditions = isFocused() && ((m_lastViewStateFlags & headValid) == headValid) && !m_eyeTrackingFailed;
+        const auto nowSteady = std::chrono::steady_clock::now();
+        if (!gazeConditions)
+            m_gazeConditionsSince = std::chrono::steady_clock::time_point{};
+        else if (m_gazeConditionsSince == std::chrono::steady_clock::time_point{})
+            m_gazeConditionsSince = nowSteady;
+        m_gazeQueryAllowed = gazeConditions && (nowSteady - m_gazeConditionsSince) >= std::chrono::seconds(1);
+
+        // m_xrInput is reset in closeSession(), which can still poll events (and thus get here)
+        if (!m_xrInput)
+            return true;
+        m_xrInput->setEyeGazeQueryAllowed(m_gazeQueryAllowed);
+
+        // Sync input actions (controllers and, with XR_EXT_eye_gaze_interaction, the eye gaze pose)
         if(!m_xrInput->sync(m_lastFrameState.predictedDisplayTime)) {
             return false;
         }
+
+        // Update eye gaze (located in the play space at the predicted display time, like the views)
+        updateEyeGazes();
         return true;
+    }
+
+    XrVector3f OpenXRHMD::applyInitialScale(const XrVector3f& p) const
+    {
+        return XrVector3f{
+            initial_adjustment.position.x + (p.x - initial_adjustment.position.x) * scale,
+            initial_adjustment.position.y + (p.y - initial_adjustment.position.y) * scale,
+            initial_adjustment.position.z + (p.z - initial_adjustment.position.z) * scale };
+    }
+
+    void OpenXRHMD::updateEyeGazes()
+    {
+        m_gaze[0] = GazeSample();
+        m_gaze[1] = GazeSample();
+
+        if (!m_gazeQueryAllowed)
+            return;
+
+        if (m_eyeTrackingBackend == EyeTrackingBackend::HTC_EYE_TRACKER)
+        {
+            if (m_htcEyeTracker == XR_NULL_HANDLE && !m_htcCreateAttempted)
+                createHtcEyeTracker();
+            if (m_htcEyeTracker == XR_NULL_HANDLE || !xrGetEyeGazeDataHTC_)
+                return;
+            try
+            {
+                XrEyeGazeDataInfoHTC gazeInfo{ XR_TYPE_EYE_GAZE_DATA_INFO_HTC };
+                gazeInfo.next = NULL;
+                gazeInfo.baseSpace = m_playSpace;
+                gazeInfo.time = m_lastFrameState.predictedDisplayTime;
+                XrEyeGazeDataHTC gazeData{ XR_TYPE_EYE_GAZE_DATA_HTC };
+                gazeData.next = NULL;
+                XR_TRACE("xrGetEyeGazeDataHTC ->");
+                XrResult result = xrGetEyeGazeDataHTC_(m_htcEyeTracker, &gazeInfo, &gazeData);
+                XR_TRACE("xrGetEyeGazeDataHTC <- " << result);
+                if (XR_FAILED(result))
+                    return;
+                for (uint32_t i = 0; i < 2; i++)
+                {
+                    m_gaze[i].valid = (gazeData.gaze[i].isValid == XR_TRUE);
+                    m_gaze[i].tracked = m_gaze[i].valid;
+                    m_gaze[i].sampleTime = gazeData.time;
+                    if (m_gaze[i].valid)
+                    {
+                        m_gaze[i].pose.orientation = gazeData.gaze[i].gazePose.orientation;
+                        m_gaze[i].pose.position = applyInitialScale(gazeData.gaze[i].gazePose.position);
+                    }
+                }
+
+                if (xrGetEyePupilDataHTC_)
+                {
+                    XrEyePupilDataInfoHTC pupilInfo{ XR_TYPE_EYE_PUPIL_DATA_INFO_HTC };
+                    pupilInfo.next = NULL;
+                    XrEyePupilDataHTC pupilData{ XR_TYPE_EYE_PUPIL_DATA_HTC };
+                    pupilData.next = NULL;
+                    if (XR_SUCCEEDED(xrGetEyePupilDataHTC_(m_htcEyeTracker, &pupilInfo, &pupilData)))
+                    {
+                        // The layer was observed to flag out-of-range values as valid: range-check everything
+                        auto inRange = [](float v, float lo, float hi) { return std::isfinite(v) && v >= lo && v <= hi; };
+                        for (uint32_t i = 0; i < 2; i++)
+                        {
+                            const XrSingleEyePupilDataHTC &p = pupilData.pupilData[i];
+                            m_gaze[i].pupilDiameterValid = (p.isDiameterValid == XR_TRUE) && inRange(p.pupilDiameter, 0.5f, 12.f);
+                            m_gaze[i].pupilDiameterMm = p.pupilDiameter;
+                            m_gaze[i].pupilPositionValid = (p.isPositionValid == XR_TRUE) &&
+                                                           inRange(p.pupilPosition.x, 0.f, 1.f) && inRange(p.pupilPosition.y, 0.f, 1.f);
+                            m_gaze[i].pupilPosition = p.pupilPosition;
+                        }
+                    }
+                }
+                if (xrGetEyeGeometricDataHTC_)
+                {
+                    XrEyeGeometricDataInfoHTC geometricInfo{ XR_TYPE_EYE_GEOMETRIC_DATA_INFO_HTC };
+                    geometricInfo.next = NULL;
+                    XrEyeGeometricDataHTC geometricData{ XR_TYPE_EYE_GEOMETRIC_DATA_HTC };
+                    geometricData.next = NULL;
+                    if (XR_SUCCEEDED(xrGetEyeGeometricDataHTC_(m_htcEyeTracker, &geometricInfo, &geometricData)))
+                    {
+                        for (uint32_t i = 0; i < 2; i++)
+                        {
+                            const float openness = geometricData.eyeGeometricData[i].eyeOpenness;
+                            // observed: isValid=1 with garbage values (e.g. 4e+30) -> keep only values in [0,1]
+                            m_gaze[i].opennessValid = (geometricData.eyeGeometricData[i].isValid == XR_TRUE) &&
+                                                      std::isfinite(openness) && openness >= 0.f && openness <= 1.f;
+                            m_gaze[i].openness = openness;
+                        }
+                    }
+                }
+            }
+            catch (...)
+            {
+                SIBR_WRG << "[EyeTracking] The VIVE eye tracking layer threw an exception: eye tracking disabled for this session" << std::endl;
+                m_eyeTrackingFailed = true;
+                m_gaze[0] = GazeSample();
+                m_gaze[1] = GazeSample();
+            }
+            return;
+        }
+
+        if (m_eyeTrackingBackend == EyeTrackingBackend::FB_EYE_TRACKING_SOCIAL)
+        {
+            if (eyeTracker == XR_NULL_HANDLE || !xrGetEyeGazesFB_)
+                return;
+            eyeGazes.type = XR_TYPE_EYE_GAZES_FB;
+            eyeGazes.next = nullptr;
+            gazesInfo.type = XR_TYPE_EYE_GAZES_INFO_FB;
+            gazesInfo.next = nullptr;
+            gazesInfo.baseSpace = m_playSpace;
+            gazesInfo.time = m_lastFrameState.predictedDisplayTime; // (was left to 0 upstream)
+            XrResult result = xrGetEyeGazesFB_(eyeTracker, &gazesInfo, &eyeGazes);
+            if (XR_FAILED(result))
+            {
+                eyeGazes.gaze[0].isValid = XR_FALSE;
+                eyeGazes.gaze[1].isValid = XR_FALSE;
+                return;
+            }
+            for (uint32_t i = 0; i < 2; i++)
+            {
+                // keep the public eyeGazes member consistent with the scaled positions (as upstream)
+                eyeGazes.gaze[i].gazePose.position = applyInitialScale(eyeGazes.gaze[i].gazePose.position);
+                m_gaze[i].valid = (eyeGazes.gaze[i].isValid == XR_TRUE);
+                m_gaze[i].tracked = m_gaze[i].valid;
+                m_gaze[i].pose = eyeGazes.gaze[i].gazePose;
+                m_gaze[i].sampleTime = eyeGazes.time;
+            }
+        }
+        else if (m_eyeTrackingBackend == EyeTrackingBackend::EXT_EYE_GAZE_INTERACTION)
+        {
+            if (!m_xrInput)
+                return;
+            if (!m_xrInput->eyeGazeEnabled())
+            {
+                m_eyeTrackingFailed = true; // gaze action could not be created or the layer threw
+                return;
+            }
+            const OpenXRInput::EyeGazeState &state = m_xrInput->getEyeGaze();
+            if (!state.isActive || !(state.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT))
+                return;
+
+            GazeSample sample;
+            sample.valid = true;
+            sample.tracked = (state.locationFlags & XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT) != 0;
+            sample.pose.orientation = state.pose.orientation;
+            if (state.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT)
+            {
+                sample.pose.position = applyInitialScale(state.pose.position);
+            }
+            else if (m_viewCount >= 2)
+            {
+                // No gaze origin from the runtime: use the middle of both eyes (views are already scaled)
+                sample.pose.position = XrVector3f{
+                    0.5f * (views[0].pose.position.x + views[1].pose.position.x),
+                    0.5f * (views[0].pose.position.y + views[1].pose.position.y),
+                    0.5f * (views[0].pose.position.z + views[1].pose.position.z) };
+            }
+            sample.sampleTime = state.sampleTime;
+            // XR_EXT_eye_gaze_interaction only provides the combined gaze: same sample for both views
+            m_gaze[0] = sample;
+            m_gaze[1] = sample;
+        }
+    }
+
+    std::string OpenXRHMD::getEyeTrackingStatus(bool& ok) const
+    {
+        ok = m_gaze[0].valid || m_gaze[1].valid;
+        if (m_eyeTrackingBackend != EyeTrackingBackend::NONE)
+        {
+            if (m_eyeTrackingFailed)
+                return "eye tracking FAILED (exception in the runtime/API layer): see the console";
+            if (!isFocused())
+                return "waiting for the application to be focused in the headset (remove the SteamVR dashboard)";
+            const XrViewStateFlags headValid = XR_VIEW_STATE_ORIENTATION_VALID_BIT | XR_VIEW_STATE_POSITION_VALID_BIT;
+            if ((m_lastViewStateFlags & headValid) != headValid)
+                return "headset NOT tracked (base stations on and visible?): gaze is not queried";
+            if (!m_gazeQueryAllowed)
+                return "headset tracked: starting eye tracking...";
+        }
+        switch (m_eyeTrackingBackend)
+        {
+        case EyeTrackingBackend::HTC_EYE_TRACKER:
+            if (m_htcEyeTracker == XR_NULL_HANDLE)
+                return "HTC eye tracker could not be created (SR_Runtime running? eye tracking enabled?)";
+            if (!ok)
+                return "no valid gaze (headset worn? eyes visible? calibrated?)";
+            return "gaze valid";
+        case EyeTrackingBackend::FB_EYE_TRACKING_SOCIAL:
+            if (eyeTracker == XR_NULL_HANDLE)
+                return "eye tracker could not be created (eye tracking permission?)";
+            if (!ok)
+                return "no valid gaze (headset worn? eye tracking calibrated?)";
+            return "gaze valid";
+        case EyeTrackingBackend::EXT_EYE_GAZE_INTERACTION:
+        {
+            if (!m_xrInput || !m_xrInput->eyeGazeEnabled())
+                return "gaze action could not be created";
+            const OpenXRInput::EyeGazeState &state = m_xrInput->getEyeGaze();
+            if (!state.isActive)
+                return "gaze action INACTIVE: the runtime delivers no gaze (app focused? eye tracking enabled in VIVE Console / SRanipal running?)";
+            if (!ok)
+                return "gaze action active but no valid sample (headset worn? eyes visible? calibrated?)";
+            return m_gaze[0].tracked ? "gaze valid (tracked)" : "gaze valid (not tracked)";
+        }
+        default:
+            return "no eye tracking extension available: no gaze will be recorded";
+        }
+    }
+
+    const OpenXRHMD::GazeSample& OpenXRHMD::getGazeSample(Eye eye) const
+    {
+        return m_gaze[eye == Eye::LEFT ? 0 : 1];
+    }
+
+    const char* OpenXRHMD::getEyeTrackingBackendName() const
+    {
+        switch (m_eyeTrackingBackend)
+        {
+        case EyeTrackingBackend::FB_EYE_TRACKING_SOCIAL:
+            return "FB_eye_tracking_social";
+        case EyeTrackingBackend::EXT_EYE_GAZE_INTERACTION:
+            return "EXT_eye_gaze_interaction";
+        case EyeTrackingBackend::HTC_EYE_TRACKER:
+            return "HTC_eye_tracker";
+        default:
+            return "none";
+        }
     }
 
     bool OpenXRHMD::closeSession()
     {
+        // Eye tracker handles are children of the session: destroy them first
+        // (if the session was already destroyed by the runtime, its children were destroyed with it)
+        if (eyeTracker != XR_NULL_HANDLE && xrDestroyEyeTrackerFB_ && m_session != XR_NULL_HANDLE)
+        {
+            xrDestroyEyeTrackerFB_(eyeTracker);
+        }
+        eyeTracker = XR_NULL_HANDLE;
+        if (m_htcEyeTracker != XR_NULL_HANDLE && xrDestroyEyeTrackerHTC_ && m_session != XR_NULL_HANDLE)
+        {
+            try { xrDestroyEyeTrackerHTC_(m_htcEyeTracker); } catch (...) {}
+        }
+        m_htcEyeTracker = XR_NULL_HANDLE;
         m_xrInput.reset();
 
         // If session is already idle, just destroy it
@@ -1012,7 +1408,9 @@ namespace sibr
         frameBeginInfo.type = XR_TYPE_FRAME_BEGIN_INFO;
         frameBeginInfo.next = NULL;
 
+        XR_TRACE("xrBeginFrame ->");
         XrResult result = xrBeginFrame(m_session, &frameBeginInfo);
+        XR_TRACE("xrBeginFrame <- " << result);
         if (!xrCheck(m_instance, result, "failed to begin frame!"))
             return false;
 
@@ -1074,7 +1472,9 @@ namespace sibr
 		frameEndInfo.layerCount = submitted_layer_count;
 		frameEndInfo.layers = submitted_layers;
 
+        XR_TRACE("xrEndFrame ->");
         result = xrEndFrame(m_session, &frameEndInfo);
+        XR_TRACE("xrEndFrame <- " << result);
         if (!xrCheck(m_instance, result, "failed to end frame!"))
             return false;
 
@@ -1087,7 +1487,9 @@ namespace sibr
         frameBeginInfo.type = XR_TYPE_FRAME_BEGIN_INFO;
         frameBeginInfo.next = NULL;
 
+        XR_TRACE("xrBeginFrame ->");
         XrResult result = xrBeginFrame(m_session, &frameBeginInfo);
+        XR_TRACE("xrBeginFrame <- " << result);
         if (!xrCheck(m_instance, result, "failed to begin frame!"))
             return false;
 
@@ -1098,7 +1500,9 @@ namespace sibr
 		frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 		frameEndInfo.layerCount = 0;
 		frameEndInfo.layers = NULL;
+        XR_TRACE("xrEndFrame ->");
         result = xrEndFrame(m_session, &frameEndInfo);
+        XR_TRACE("xrEndFrame <- " << result);
         if (!xrCheck(m_instance, result, "failed to end frame!"))
             return false;
 
@@ -1209,12 +1613,51 @@ namespace sibr
 
     bool OpenXRHMD::startEyeTracker()
     {
-        if (eyetracking_supported) {
-            XrEyeTrackerCreateInfoFB createInfo{ .type = XR_TYPE_EYE_TRACKER_CREATE_INFO_FB };
+        // XR_FB_eye_tracking_social and XR_HTC_eye_tracker need an explicit eye tracker handle.
+        // XR_EXT_eye_gaze_interaction goes through the action system (see OpenXRInput).
+        if (m_eyeTrackingBackend == EyeTrackingBackend::HTC_EYE_TRACKER)
+        {
+            // Created lazily in updateEyeGazes(), once the app is focused and the headset tracked:
+            // the VIVE layer abort()s the whole process if SRanipal cannot start its eye framework
+            // (e.g. headset in standby / not tracked), which cannot be caught.
+            SIBR_LOG << "[EyeTracking] The HTC eye tracker will be created once the headset is tracked and the application focused" << std::endl;
+            return true;
+        }
+        if (m_eyeTrackingBackend == EyeTrackingBackend::FB_EYE_TRACKING_SOCIAL && m_session != XR_NULL_HANDLE) {
+            XrEyeTrackerCreateInfoFB createInfo{ XR_TYPE_EYE_TRACKER_CREATE_INFO_FB };
+            createInfo.next = NULL;
             XrResult result = xrCreateEyeTrackerFB_(m_session, &createInfo, &eyeTracker);
             if (!xrCheck(m_instance, result, "Failed to create eyeTracker\n"))
                 return false;
         }
+        return true;
+    }
+
+    bool OpenXRHMD::createHtcEyeTracker()
+    {
+        m_htcCreateAttempted = true;
+        if (m_session == XR_NULL_HANDLE || !xrCreateEyeTrackerHTC_)
+            return false;
+        SIBR_LOG << "[EyeTracking] Creating the HTC eye tracker (SRanipal must be running: SR_Runtime tray icon)..." << std::endl;
+        XrEyeTrackerCreateInfoHTC createInfo{ XR_TYPE_EYE_TRACKER_CREATE_INFO_HTC };
+        createInfo.next = NULL;
+        XrResult result = XR_ERROR_RUNTIME_FAILURE;
+        try
+        {
+            result = xrCreateEyeTrackerHTC_(m_session, &createInfo, &m_htcEyeTracker);
+        }
+        catch (...)
+        {
+            SIBR_WRG << "[EyeTracking] xrCreateEyeTrackerHTC threw an exception" << std::endl;
+            result = XR_ERROR_RUNTIME_FAILURE;
+        }
+        if (!xrCheck(m_instance, result, "Failed to create the HTC eye tracker"))
+        {
+            m_htcEyeTracker = XR_NULL_HANDLE;
+            m_eyeTrackingFailed = true;
+            return false;
+        }
+        SIBR_LOG << "[EyeTracking] HTC eye tracker created" << std::endl;
         return true;
     }
 

@@ -25,6 +25,13 @@
 #include <chrono>
 #include <ctime>
 #include <iomanip>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <exception>
+#include <iostream>
+
+#include <core/system/Utils.hpp>
 
 
 namespace sibr
@@ -57,6 +64,28 @@ namespace sibr
     //OpenXRRdrMode::OpenXRRdrMode(sibr::Window &window, Eigen::Vector3f ipos, Eigen::Vector4f iq, float scale, const std::string& configFile)
     OpenXRRdrMode::OpenXRRdrMode(sibr::Window& window, Eigen::Vector3f ipos, Eigen::Vector4f iq, float scale, const std::string& configFile, const std::string& sceneName)
     {
+        // Last-resort diagnostics: print the message of an uncaught C++ exception (e.g. thrown by an OpenXR
+        // runtime/API layer) and flush the logs before aborting, instead of a silent crash.
+        std::set_terminate([]() {
+            std::cout.flush();
+            try
+            {
+                std::exception_ptr exception = std::current_exception();
+                if (exception)
+                    std::rethrow_exception(exception);
+                std::cerr << "[SIBR] ##  FATAL  ##: std::terminate called without an active exception" << std::endl;
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << "[SIBR] ##  FATAL  ##: uncaught C++ exception: " << e.what() << std::endl;
+            }
+            catch (...)
+            {
+                std::cerr << "[SIBR] ##  FATAL  ##: uncaught unknown C++ exception" << std::endl;
+            }
+            std::abort();
+        });
+
         XRwindow = &window;
         m_quadShader.init("Texture",
                           sibr::loadFile(sibr::Resources::Instance()->getResourceFilePathName("texture.vp")),
@@ -98,7 +127,8 @@ namespace sibr
         }
 
         m_openxrHmd = std::make_unique<OpenXRHMD>("Gaussian splatting");
-        initial_sacle = scale;
+        // (upstream had 'initial_sacle = scale;' here: an undeclared identifier that broke the build;
+        //  the scale is already forwarded to the HMD through setInitialPose())
         m_openxrHmd->setInitialPose(ipos, iq, scale);
         if (!m_openxrHmd->init()) {
             SIBR_ERR << "Failed to connect to OpenXR" << std::endl;
@@ -199,6 +229,11 @@ namespace sibr
 
     OpenXRRdrMode::~OpenXRRdrMode()
     {/**/
+        // Make sure a trace being recorded is flushed and closed when the viewer is closed
+        if (outFile.is_open())
+        {
+            stopTraceRecording();
+        }
         m_RTPool.clear();
         m_openxrHmd->closeSession();
         m_openxrHmd->terminate();
@@ -271,6 +306,23 @@ namespace sibr
             return;
         }
 
+        // Automatic recording (--record-trace [--record-duration <s>])
+        if (m_autoRecordPending && m_appFocused)
+        {
+            m_autoRecordPending = false;
+            if (startTraceRecording("trace"))
+            {
+                m_autoRecordRunning = true;
+                m_autoRecordStart = std::chrono::steady_clock::now();
+            }
+        }
+        if (m_autoRecordRunning && m_autoRecordDuration > 0.f &&
+            std::chrono::duration<float>(std::chrono::steady_clock::now() - m_autoRecordStart).count() >= m_autoRecordDuration)
+        {
+            SIBR_LOG << "Automatic recording duration reached (" << m_autoRecordDuration << " s)" << std::endl;
+            stopTraceRecording();
+        }
+
         // Headset pose has changed, let's update our VR head camera
         updateHeadCamera(camera);
 
@@ -301,108 +353,26 @@ namespace sibr
                                      auto q = PlayMode == 2 ? viewData.quaternion : this->m_openxrHmd->getPoseQuaternion(eye);
                                      auto pos = PlayMode == 2 ? viewData.position : this->m_openxrHmd->getPosePosition(eye);
 
-                                     if (!m_openxrHmd->eyeGazes.gaze[viewIndex].isValid && isEyeTracking) {
-                                         SIBR_LOG<< "Eye Gaze is invalid!\n";
-                                         isEyeTracking = false;
-                                      }
-                                     XrQuaternionf unitQ = { 0,0,0,1 };
-                                     XrVector3f unitP = { 0,0,0 };
-                                     auto gaze_q = (isEyeTracking) ? m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.orientation : unitQ;
-                                     auto gaze_pos = (isEyeTracking) ? m_openxrHmd->eyeGazes.gaze[viewIndex].gazePose.position : unitP;
+                                     // Eye gaze of this view (XR_FB_eye_tracking_social: per eye,
+                                     // XR_EXT_eye_gaze_interaction: same combined gaze for both views).
+                                     // Upstream disabled gaze for the whole session after the first invalid
+                                     // sample (e.g. a blink); validity is now written per row (GazeValid).
+                                     const OpenXRHMD::GazeSample& gaze = m_openxrHmd->getGazeSample(eye);
+                                     XrQuaternionf gaze_q = gaze.valid ? gaze.pose.orientation : XrQuaternionf{ 0.f, 0.f, 0.f, 1.f };
+                                     XrVector3f gaze_pos = gaze.valid ? gaze.pose.position : XrVector3f{ 0.f, 0.f, 0.f };
                                      currentQ = q;
                                      pos += Movement;
-                                     gaze_pos.x += Movement.x();
-                                     gaze_pos.y += Movement.y();
-                                     gaze_pos.z += Movement.z();
-
-                                     // Get timestamp in microseconds
-                                     using namespace std::chrono;
-                                                                          
-                                     auto now = high_resolution_clock::now();
-                                     auto now_us = time_point_cast<microseconds>(now);
-                                     auto epoch = now_us.time_since_epoch().count();
-                                     double epoch_ms = static_cast<double>(epoch) / 1000.0;
-
-
-                                     // Get realtime with millisecond precision
-                                     auto now_sys = system_clock::now();
-                                     auto duration = now_sys.time_since_epoch();
-                                     auto millis = duration_cast<milliseconds>(duration).count();
-                                     auto seconds_part = duration_cast<std::chrono::seconds>(duration);
-                                     auto ms_part = millis % 1000;
-
-                                     std::time_t time_now = system_clock::to_time_t(now_sys);
-                                     std::tm tm_now;
-                                     localtime_s(&tm_now, &time_now);
-
-                                     std::ostringstream realtimeStream;
-                                     realtimeStream << std::put_time(&tm_now, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(3) << ms_part;
-
-                                     //Compute elapsed_ms
-                                     auto now_steady = std::chrono::steady_clock::now();
-                                     //auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now_steady - recordingStartTime).count();
-                                     if (recordingStartTime.time_since_epoch().count() == 0) {
-                                         recordingStartTime = now_steady;
+                                     if (gaze.valid) {
+                                         // the gaze origin moves with the head (controller-driven offset)
+                                         gaze_pos.x += Movement.x();
+                                         gaze_pos.y += Movement.y();
+                                         gaze_pos.z += Movement.z();
                                      }
 
-                                     auto elapsed = std::chrono::duration<double, std::milli>(now_steady - recordingStartTime).count();
-                                     
-                                     //Get ISO 8601 timestamp with local timezone 
-                                     /*
-                                     auto now_sys = std::chrono::system_clock::now();
-                                     auto duration = now_sys.time_since_epoch();
-                                     auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-                                     auto ms_part = millis % 1000;
-
-                                     std::time_t now_tt = std::chrono::system_clock::to_time_t(now_sys);
-                                     std::tm local_tm;
-                                     localtime_s(&local_tm, &now_tt);  // Windows-safe
-                                     */
-
-                                     std::ostringstream isoStream;
-                                     isoStream << std::put_time(&tm_now, "%Y-%m-%dT%H:%M:%S")
-                                         << '.' << std::setw(3) << std::setfill('0') << ms_part;
-
-                                     // Timezone offset
-                                     //long timezone_offset_sec = _timezone;
-                                     long timezone_offset_sec = 0;
-                                     _get_timezone(&timezone_offset_sec);
-
-                                     int offset_hours = -timezone_offset_sec / 3600;
-                                     int offset_minutes = (abs(timezone_offset_sec) / 60) % 60;
-
-                                     isoStream << (offset_hours >= 0 ? '+' : '-')
-                                         << std::setw(2) << std::setfill('0') << abs(offset_hours)
-                                         << ":" << std::setw(2) << std::setfill('0') << offset_minutes;
-
-                                     
-                                     
-                                     //-----save position and quaternion to file
-
-                                     /*
-                                     
-                                     if (PlayMode == 0||Rec_Sav) {
-                                         outFile << viewIndex << "," // View index
-                                             << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
-                                             << pos.x() << "," << pos.y() << "," << pos.z() << ","
-                                             << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << ","
-                                             << gaze_q.x << "," << gaze_q.y << "," << gaze_q.z << "," << gaze_q.w << ","
-                                             << gaze_pos.x << "," << gaze_pos.y << "," << gaze_pos.z
-                                             << "\n";
+                                     //-----save position, quaternion and gaze to the trace file
+                                     if (outFile.is_open()) {
+                                         writeTraceRow(viewIndex, fov, pos, q, gaze, gaze_q, gaze_pos);
                                      }
-                                     */
-
-                                     outFile << viewIndex << ","
-                                         << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w() << ","
-                                         << pos.x() << "," << pos.y() << "," << pos.z() << ","
-                                         << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << ","
-                                         << gaze_q.x << "," << gaze_q.y << "," << gaze_q.z << "," << gaze_q.w << ","
-                                         << gaze_pos.x << "," << gaze_pos.y << "," << gaze_pos.z << ","
-                                         << epoch << "," << realtimeStream.str() << ","
-                                         //<< elapsed << "," << isoStream.str()
-                                         << std::fixed << std::setprecision(3) << elapsed << "," << isoStream.str() << "," 
-                                         << std::fixed << std::setprecision(3) << epoch_ms
-                                         << "\n";
 
 
 
@@ -427,8 +397,9 @@ namespace sibr
                                      
                                      cam.rotate(q);
                                      cam.position(pos);
-                                     cam.zfar(0.2f);
-                                     cam.znear(250.f);
+                                     // (upstream swapped near and far: zfar(0.2) / znear(250))
+                                     cam.znear(0.2f);
+                                     cam.zfar(250.f);
                                      cam.fovy(fov.w() - fov.z());
                                      cam.aspect((fov.y() - fov.x()) / (fov.w() - fov.z()));
 
@@ -529,8 +500,24 @@ namespace sibr
             //leftEyeVideoWriter.open(File+"left.mp4", fourcc, fps, frameSize);
             //rightEyeVideoWriter.open(File+"right.mp4", fourcc, fps, frameSize);
 
-            leftEyeVideoWriter.open(_sceneName + "_left.mp4", fourcc, fps, frameSize);
-            rightEyeVideoWriter.open(_sceneName + "_right.mp4", fourcc, fps, frameSize);
+            if (!m_traceDir.empty())
+                sibr::makeDirectory(m_traceDir);
+            const std::string leftVideo = outputFilePath(_sceneName + "_left.mp4");
+            const std::string rightVideo = outputFilePath(_sceneName + "_right.mp4");
+            leftEyeVideoWriter.open(leftVideo, fourcc, fps, frameSize);
+            rightEyeVideoWriter.open(rightVideo, fourcc, fps, frameSize);
+            if (!leftEyeVideoWriter.isOpened() || !rightEyeVideoWriter.isOpened())
+            {
+                // H264 needs an encoder (e.g. openh264) that is not always available: fall back to MPEG-4
+                SIBR_WRG << "Could not open H264 video writers, falling back to MPEG-4 ('mp4v')" << std::endl;
+                const int fallbackFourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
+                if (!leftEyeVideoWriter.isOpened())
+                    leftEyeVideoWriter.open(leftVideo, fallbackFourcc, fps, frameSize);
+                if (!rightEyeVideoWriter.isOpened())
+                    rightEyeVideoWriter.open(rightVideo, fallbackFourcc, fps, frameSize);
+            }
+            SIBR_LOG << "Eye videos: '" << leftVideo << "' (" << (leftEyeVideoWriter.isOpened() ? "ok" : "FAILED")
+                     << "), '" << rightVideo << "' (" << (rightEyeVideoWriter.isOpened() ? "ok" : "FAILED") << ")" << std::endl;
 
 
             if (!Rec_Sav) {
@@ -569,65 +556,38 @@ namespace sibr
 
         // Add Save Tracks button
         if (ImGui::Button("Start Trace Recording")) {
-            PlayMode = 0;
-            recordingStartTime = std::chrono::steady_clock::now();
-
-            
-            if (!outFile.is_open()) {
-                //const std::string& out = "Output" + std::to_string(FrameIndex++)+".csv";
-                const std::string out = _sceneName + "_trace_" + std::to_string(FrameIndex++) + ".csv";
-                outFile.open(out, std::ios::app);
-                // Write the CSV header if the file is being created
-                /*
-                if (outFile.tellp() == 0) {
-                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ\n";
-                }
-                */
-                if (outFile.tellp() == 0) {
-                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ,timestamp,realtime,elapsed_ms,iso_time,epoch_ms\n";
-                }
-
-            }
-            
-            SIBR_LOG << "Start saving HMD traces to output file" << std::endl;
+            startTraceRecording("trace");
         }
 
         // Add End Trace Recording button
         ImGui::SameLine();  // Display on the same line
         if (ImGui::Button("End Trace Recording")) {
-            if (outFile.is_open()) {
-                outFile.close();
-            }
-
-            if (leftEyeVideoWriter.isOpened()) {
-                leftEyeVideoWriter.release();
-            }
-            if (rightEyeVideoWriter.isOpened()) {
-                rightEyeVideoWriter.release();
-            }
-            Rec_Sav = false;
-            PlayMode = 1;
-            SIBR_LOG << "Saving Finished" << std::endl;
-            
+            stopTraceRecording();
         }
-        //Add Recording and Saving button
+        //Add Recording and Saving button (trace + left/right eye videos)
         if (ImGui::Button("Recording and Saving") ){
             PlayMode = 0;
             Rec_Sav = true;
-            recordingStartTime = std::chrono::steady_clock::now();
-
             StartRecord("output_Rec_");
-            if (!outFile.is_open()) {
-                //const std::string& out = "Output" + std::to_string(FrameIndex++) + ".csv";
-                const std::string out = _sceneName + "_output_" + std::to_string(FrameIndex++) + ".csv";
-                outFile.open(out, std::ios::app);
-                // Write the CSV header if the file is being created
-                if (outFile.tellp() == 0) {
-                    outFile << "ViewIndex,FOV1,FOV2,FOV3,FOV4,PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ\n";
-                }
-            }
+            startTraceRecording("output");
+        }
 
-            SIBR_LOG << "Start saving HMD traces to output file" << std::endl;
+        // Eye tracking / recording status
+        {
+            bool gazeOk = false;
+            const std::string gazeStatus = m_openxrHmd->getEyeTrackingStatus(gazeOk);
+            ImGui::Text("Eye tracking: %s", m_openxrHmd->getEyeTrackingBackendName());
+            ImGui::TextColored(gazeOk ? ImVec4(0.4f, 1.f, 0.4f, 1.f) : ImVec4(1.f, 0.6f, 0.2f, 1.f), "%s", gazeStatus.c_str());
+            if (outFile.is_open())
+            {
+                const double validPct = m_traceRows ? 100.0 * double(m_traceValidGazeRows) / double(m_traceRows) : 0.0;
+                ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "REC %s  (%llu rows, %.1f%% valid gaze)",
+                                   m_currentTracePath.c_str(), m_traceRows, validPct);
+            }
+            else if (m_autoRecordPending)
+            {
+                ImGui::Text("Waiting for the application to be focused in the headset to start recording...");
+            }
         }
 
         if (m_openxrHmd->isSessionRunning())
@@ -827,6 +787,207 @@ namespace sibr
         CHECK_GL_ERROR;
         m_playSpaceShader.end();
         glDisable(GL_BLEND);
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // Trace recording
+    // ------------------------------------------------------------------------------------------
+
+    const char* OpenXRRdrMode::traceHeader()
+    {
+        // The first 24 columns are unchanged from the original EyeNavGS format (compatible with the
+        // dataset tools); the last 10 columns were added for eye-tracking quality, synchronization,
+        // the extra eye data of the HTC VIVE Pro Eye (XR_HTC_eye_tracker, 'nan' otherwise) and
+        // compatibility with tools written for the NTHU dataset ('timestep').
+        return "ViewIndex,FOV1,FOV2,FOV3,FOV4,"
+               "PositionX,PositionY,PositionZ,QuaternionX,QuaternionY,QuaternionZ,QuaternionW,"
+               "GazeQX,GazeQY,GazeQZ,GazeQW,GazePosX,GazePosY,GazePosZ,"
+               "timestamp,realtime,elapsed_ms,iso_time,epoch_ms,"
+               "GazeValid,GazeTracked,GazeSource,xr_display_time_ns,gaze_sample_time_ns,"
+               "PupilDiameter_mm,PupilPosX,PupilPosY,EyeOpenness,"
+               "timestep\n"; // integer ms since the start of the recording (same as the NTHU EyeNavGS dataset)
+    }
+
+    void OpenXRRdrMode::setTraceDirectory(const std::string& dir)
+    {
+        m_traceDir = dir;
+        while (!m_traceDir.empty() && (m_traceDir.back() == '/' || m_traceDir.back() == '\\'))
+            m_traceDir.pop_back();
+        if (!m_traceDir.empty())
+            SIBR_LOG << "Traces will be written to directory '" << m_traceDir << "'" << std::endl;
+    }
+
+    void OpenXRRdrMode::requestAutoRecord(float durationSeconds)
+    {
+        m_autoRecordPending = true;
+        m_autoRecordDuration = durationSeconds;
+        SIBR_LOG << "Trace recording will start automatically when the application is focused in the headset"
+                 << (durationSeconds > 0.f ? " and stop after " + std::to_string(durationSeconds) + " s" : std::string())
+                 << std::endl;
+    }
+
+    std::string OpenXRRdrMode::outputFilePath(const std::string& fileName) const
+    {
+        return m_traceDir.empty() ? fileName : m_traceDir + "/" + fileName;
+    }
+
+    std::string OpenXRRdrMode::nextFreeTracePath(const std::string& kind)
+    {
+        // Never append to (or overwrite) a previous recording: upstream re-opened '<scene>_trace_0.csv'
+        // in append mode at each launch, silently concatenating sessions without header.
+        for (int index = std::max<int>(0, FrameIndex); index < 100000; ++index)
+        {
+            const std::string path = outputFilePath(_sceneName + "_" + kind + "_" + std::to_string(index) + ".csv");
+            if (!sibr::fileExists(path))
+            {
+                FrameIndex = static_cast<std::int16_t>(std::min(index + 1, 32767));
+                return path;
+            }
+        }
+        return outputFilePath(_sceneName + "_" + kind + "_overflow.csv");
+    }
+
+    bool OpenXRRdrMode::startTraceRecording(const std::string& kind)
+    {
+        if (outFile.is_open())
+        {
+            SIBR_LOG << "A trace is already being recorded to '" << m_currentTracePath << "'" << std::endl;
+            return true;
+        }
+        if (!m_traceDir.empty())
+        {
+            sibr::makeDirectory(m_traceDir);
+        }
+        m_currentTracePath = nextFreeTracePath(kind);
+        outFile.open(m_currentTracePath, std::ios::out | std::ios::trunc);
+        if (!outFile.is_open())
+        {
+            SIBR_WRG << "Cannot create trace file '" << m_currentTracePath << "'" << std::endl;
+            return false;
+        }
+        outFile << traceHeader();
+        PlayMode = 0;
+        m_traceRows = 0;
+        m_traceValidGazeRows = 0;
+        recordingStartTime = std::chrono::steady_clock::now();
+
+        std::string displayPath = m_currentTracePath;
+#ifdef _WIN32
+        char fullPath[_MAX_PATH];
+        if (_fullpath(fullPath, m_currentTracePath.c_str(), _MAX_PATH) != NULL)
+            displayPath = fullPath;
+#endif
+        SIBR_LOG << "Start saving HMD traces to '" << displayPath << "' (eye tracking: "
+                 << m_openxrHmd->getEyeTrackingBackendName() << ")" << std::endl;
+        return true;
+    }
+
+    void OpenXRRdrMode::stopTraceRecording()
+    {
+        if (outFile.is_open())
+        {
+            outFile.flush();
+            outFile.close();
+            const double validPct = m_traceRows ? 100.0 * double(m_traceValidGazeRows) / double(m_traceRows) : 0.0;
+            SIBR_LOG << "Saving Finished: " << m_traceRows << " rows (" << std::fixed << std::setprecision(1) << validPct
+                     << std::defaultfloat << "% with valid gaze) written to '" << m_currentTracePath << "'" << std::endl;
+            if (m_traceRows > 0 && m_traceValidGazeRows == 0 && m_openxrHmd->getEyeTrackingBackend() != OpenXRHMD::EyeTrackingBackend::NONE)
+            {
+                SIBR_WRG << "No valid gaze sample was recorded: is the headset worn and the eye tracker calibrated/running?" << std::endl;
+            }
+        }
+
+        if (leftEyeVideoWriter.isOpened()) {
+            leftEyeVideoWriter.release();
+        }
+        if (rightEyeVideoWriter.isOpened()) {
+            rightEyeVideoWriter.release();
+        }
+        Rec_Sav = false;
+        PlayMode = 1;
+        m_autoRecordRunning = false;
+    }
+
+    void OpenXRRdrMode::writeTraceRow(int viewIndex, const Eigen::Vector4f& fov, const Eigen::Vector3f& pos, const Eigen::Quaternionf& q,
+                                      const OpenXRHMD::GazeSample& gaze, const XrQuaternionf& gaze_q, const XrVector3f& gaze_pos)
+    {
+        using namespace std::chrono;
+
+        // 'timestamp' (us) and 'epoch_ms' (ms): high_resolution_clock, which is steady_clock with MSVC, i.e. a
+        // monotonic clock whose origin is NOT the Unix epoch (kept as-is for compatibility with the dataset).
+        // Use 'realtime' / 'iso_time' for wall-clock time.
+        const long long epoch = time_point_cast<microseconds>(high_resolution_clock::now()).time_since_epoch().count();
+        const double epoch_ms = static_cast<double>(epoch) / 1000.0;
+
+        // Wall-clock time with millisecond precision
+        const auto now_sys = system_clock::now();
+        const long long millis = duration_cast<milliseconds>(now_sys.time_since_epoch()).count();
+        const int ms_part = static_cast<int>(millis % 1000);
+        const std::time_t time_now = system_clock::to_time_t(now_sys);
+        std::tm tm_now{};
+#ifdef _WIN32
+        localtime_s(&tm_now, &time_now);
+#else
+        localtime_r(&time_now, &tm_now);
+#endif
+
+        std::ostringstream realtimeStream;
+        realtimeStream << std::put_time(&tm_now, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(3) << ms_part;
+
+        // Elapsed time since the start of the recording
+        const auto now_steady = steady_clock::now();
+        if (recordingStartTime.time_since_epoch().count() == 0) {
+            recordingStartTime = now_steady;
+        }
+        const double elapsed = duration<double, std::milli>(now_steady - recordingStartTime).count();
+
+        // ISO 8601 timestamp with the local UTC offset (daylight saving time included; upstream ignored DST)
+        long utcOffsetSec = 0;
+#ifdef _WIN32
+        long secondsWestOfUtc = 0, dstBias = 0;
+        _get_timezone(&secondsWestOfUtc);
+        _get_dstbias(&dstBias);
+        utcOffsetSec = -(secondsWestOfUtc + (tm_now.tm_isdst > 0 ? dstBias : 0));
+#else
+        utcOffsetSec = tm_now.tm_gmtoff;
+#endif
+        const long absOffset = std::labs(utcOffsetSec);
+        std::ostringstream isoStream;
+        isoStream << std::put_time(&tm_now, "%Y-%m-%dT%H:%M:%S")
+                  << '.' << std::setw(3) << std::setfill('0') << ms_part
+                  << (utcOffsetSec >= 0 ? '+' : '-')
+                  << std::setw(2) << std::setfill('0') << absOffset / 3600 << ":"
+                  << std::setw(2) << std::setfill('0') << (absOffset % 3600) / 60;
+
+        // Pose/gaze values use 7 significant digits. (Upstream set std::fixed/setprecision(3) on the stream
+        // for the time columns, which leaked to every following row: all poses/gazes were truncated to 3 decimals.)
+        std::ostringstream row;
+        row << viewIndex << std::setprecision(7)
+            << "," << fov.x() << "," << fov.y() << "," << fov.z() << "," << fov.w()
+            << "," << pos.x() << "," << pos.y() << "," << pos.z()
+            << "," << q.x() << "," << q.y() << "," << q.z() << "," << q.w()
+            << "," << gaze_q.x << "," << gaze_q.y << "," << gaze_q.z << "," << gaze_q.w
+            << "," << gaze_pos.x << "," << gaze_pos.y << "," << gaze_pos.z
+            << "," << epoch << "," << realtimeStream.str()
+            << "," << std::fixed << std::setprecision(3) << elapsed << "," << isoStream.str() << "," << epoch_ms
+            << "," << (gaze.valid ? 1 : 0) << "," << (gaze.tracked ? 1 : 0) << "," << m_openxrHmd->getEyeTrackingBackendName()
+            << "," << static_cast<long long>(m_openxrHmd->getPredictedDisplayTime()) << "," << static_cast<long long>(gaze.sampleTime)
+            << std::defaultfloat << std::setprecision(5);
+        // Per-eye pupil / openness data (XR_HTC_eye_tracker only); 'nan' when unavailable or invalid
+        if (gaze.pupilDiameterValid) row << "," << gaze.pupilDiameterMm; else row << ",nan";
+        if (gaze.pupilPositionValid) row << "," << gaze.pupilPosition.x << "," << gaze.pupilPosition.y; else row << ",nan,nan";
+        if (gaze.opennessValid) row << "," << gaze.openness; else row << ",nan";
+        // 'timestep': integer ms since the start of the recording, as in the NTHU part of the EyeNavGS dataset
+        row << "," << static_cast<long long>(std::llround(elapsed));
+        row << "\n";
+        outFile << row.str();
+
+        ++m_traceRows;
+        if (gaze.valid)
+            ++m_traceValidGazeRows;
+        // Flush once per frame (after the right eye) so that a crash loses at most one frame
+        if (viewIndex == 1)
+            outFile.flush();
     }
 
 } /*namespace sibr*/

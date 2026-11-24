@@ -32,8 +32,32 @@ namespace sibr
             RIGHT
         };
 
-        OpenXRInput(XrInstance& instance, XrSession& session, XrSpace& refSpace);
+        /**
+         * State of the XR_EXT_eye_gaze_interaction gaze pose for the last synced frame.
+         * The pose is expressed in the reference space given to the constructor.
+         */
+        struct EyeGazeState {
+            bool isActive = false;                 ///< the gaze action is bound and active (runtime delivers gaze)
+            XrSpaceLocationFlags locationFlags = 0; ///< raw XR_SPACE_LOCATION_* flags of the last xrLocateSpace
+            XrPosef pose{ {0.f, 0.f, 0.f, 1.f}, {0.f, 0.f, 0.f} };
+            XrTime sampleTime = 0;                 ///< time of the eye tracker sample (XrEyeGazeSampleTimeEXT), 0 if unknown
+        };
+
+        /**
+         * @param enableEyeGaze: also create the XR_EXT_eye_gaze_interaction action and bindings.
+         *        Only set it if the XR_EXT_eye_gaze_interaction instance extension was enabled.
+         */
+        OpenXRInput(XrInstance& instance, XrSession& session, XrSpace& refSpace, bool enableEyeGaze = false);
         ~OpenXRInput();
+
+        /** @return true if the eye gaze action has been created (XR_EXT_eye_gaze_interaction) */
+        bool eyeGazeEnabled() const { return m_eyeGazeEnabled; }
+
+        /** @return the eye gaze state located at the time given to the last sync() call */
+        const EyeGazeState& getEyeGaze() const { return m_eyeGaze; }
+
+        /** Allow/forbid querying the eye gaze during the next sync() (e.g. not while the head is untracked) */
+        void setEyeGazeQueryAllowed(bool allowed) { m_eyeGazeQueryAllowed = allowed; }
 
         /**
          * @brief Update all actions to receive input events and dispatch callbacks
@@ -80,6 +104,15 @@ namespace sibr
         XrSpace& m_refSpace;
         XrActionSet m_actionSet;
         XrPosef m_handPose[2];
+        bool m_eyeGazeEnabled = false;
+        bool m_eyeGazeQueryAllowed = false;
+        EyeGazeState m_eyeGaze;
+        bool m_chainGazeSampleTime = true; ///< chain XrEyeGazeSampleTimeEXT to xrLocateSpace (env EYENAVGS_GAZE_SAMPLE_TIME=0 disables)
+        // diagnostics
+        bool m_lastLoggedGazeActive = false;
+        XrSpaceLocationFlags m_lastLoggedGazeFlags = 0;
+        int m_loggedGazeFlagChanges = 0;
+        void logEyeGazeChanges();
         std::map<std::string, XrPath> m_xrPaths = {};
         std::map<OpenXRInputType, XrSpace> m_xrSpaces = {};
         std::map<OpenXRInputType, XrAction> m_xrActions = {};
@@ -98,6 +131,8 @@ namespace sibr
         bool createAction(OpenXRInputType inputType, XrActionType actionType, const std::string& name);
         bool attachActionSet();
         bool locateSpaces(XrTime time);
+        void locateEyeGaze(XrTime time);
+        void locateEyeGazeUnchecked(XrTime time);
         bool extractFloatValue(XrAction action, float& value) const;
         bool extractBooleanValue(XrAction action, bool& value) const;
         bool extractPoseValue(XrAction action, XrSpaceLocation location, Vector3f& value, Quaternionf& orientation) const;

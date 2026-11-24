@@ -24,6 +24,7 @@
 #include <core/openxr/VRConfiguration.hpp>
 
 #include <map>
+#include <algorithm>
 
 namespace sibr
 {
@@ -84,8 +85,32 @@ namespace sibr
         /** \return the right eye RT. */
         virtual const std::unique_ptr<RenderTargetRGB>& rRT() { return _rightRT; }
 
-        bool isEyeTracking = true;
+        bool isEyeTracking = true; ///< (kept for API compatibility) gaze validity is now recorded per row (GazeValid column)
         void StartRecord(const std::string& saveFilePath);
+
+        /** Directory where trace CSV files (and videos) are written. Empty = current working directory. */
+        void setTraceDirectory(const std::string& dir);
+
+        /** Rendering resolution divider (1..8, same as the 'Down scale factor' slider). Higher = faster frame rate.
+         *  Note: one trace row is written per eye and per rendered frame. */
+        void setDownscaleFactor(int factor) { m_downscaleResolution = std::max(1, std::min(8, factor)); }
+
+        /** Start trace recording automatically as soon as the application is focused in the headset.
+         *\param durationSeconds stop automatically after this duration (<= 0: record until 'End Trace Recording' or exit) */
+        void requestAutoRecord(float durationSeconds);
+
+        /** Open a new trace file '<trace dir>/<scene>_<kind>_<n>.csv' (n = first unused index) and start recording.
+         *\return false if the file could not be created */
+        bool startTraceRecording(const std::string& kind = "trace");
+
+        /** Stop recording: flush/close the trace file and the video writers. */
+        void stopTraceRecording();
+
+        /** \return true while a trace file is being written */
+        bool isTraceRecording() const { return outFile.is_open(); }
+
+        /** CSV header of the traces (one row per eye and per frame). */
+        static const char* traceHeader();
 
         /** GUI for configuring OpenXR rendering */
         void onGui();
@@ -124,6 +149,20 @@ namespace sibr
         void renderVRPlaySpace(OpenXRHMD::Eye eye);
         std::chrono::steady_clock::time_point recordingStartTime; /// Use steady_clock for monotonic, non-adjusted time tracking
         std::string _sceneName; ///scene name for output csv
+
+        // Trace recording state
+        std::string m_traceDir;                                  ///< output directory ("" = working directory)
+        std::string m_currentTracePath;                          ///< path of the trace being written
+        unsigned long long m_traceRows = 0;                      ///< rows written in the current trace
+        unsigned long long m_traceValidGazeRows = 0;             ///< rows with GazeValid=1 in the current trace
+        bool m_autoRecordPending = false;                        ///< --record-trace: start as soon as focused
+        bool m_autoRecordRunning = false;                        ///< auto-recording in progress
+        float m_autoRecordDuration = 0.f;                        ///< --record-duration (seconds, <= 0: unlimited)
+        std::chrono::steady_clock::time_point m_autoRecordStart;
+        std::string outputFilePath(const std::string& fileName) const;
+        std::string nextFreeTracePath(const std::string& kind);
+        void writeTraceRow(int viewIndex, const Eigen::Vector4f& fov, const Eigen::Vector3f& pos, const Eigen::Quaternionf& q,
+                           const OpenXRHMD::GazeSample& gaze, const XrQuaternionf& gaze_q, const XrVector3f& gaze_pos);
 
 };
 

@@ -15,6 +15,31 @@
 #include <math.h>
 #include <openxr/openxr.h>
 #include <core/system/Config.hpp>
+#include <iostream>
+
+// Opt-in tracing of OpenXR calls in the frame loop (set the environment variable EYENAVGS_GAZE_DEBUG=1).
+// Each line is flushed so that the last call before a crash inside a runtime/API layer is visible.
+namespace sibr
+{
+    inline bool xrTraceEnabled()
+    {
+        static int enabled = -1;
+        if (enabled < 0)
+        {
+#ifdef _WIN32
+            char *value = nullptr;
+            size_t length = 0;
+            enabled = (_dupenv_s(&value, &length, "EYENAVGS_GAZE_DEBUG") == 0 && value != nullptr && value[0] == '1') ? 1 : 0;
+            free(value);
+#else
+            const char *value = std::getenv("EYENAVGS_GAZE_DEBUG");
+            enabled = (value != nullptr && value[0] == '1') ? 1 : 0;
+#endif
+        }
+        return enabled == 1;
+    }
+}
+#define XR_TRACE(msg) do { if (::sibr::xrTraceEnabled()) { std::cout << "[xr-trace] " << msg << std::endl; } } while (0)
 
 namespace sibr
 {

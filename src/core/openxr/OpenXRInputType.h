@@ -29,6 +29,8 @@ namespace sibr
         RIGHT_THUMBSTICK_Y,
         RIGHT_THUMBSTICK_CLICK,
         RIGHT_AIM_POSE,
+        // Combined eye gaze pose (XR_EXT_eye_gaze_interaction), e.g. HTC VIVE Pro Eye
+        EYE_GAZE_POSE,
     };
 
 }

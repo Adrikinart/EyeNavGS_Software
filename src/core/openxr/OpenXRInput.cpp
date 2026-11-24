@@ -13,14 +13,17 @@
 #include <core/openxr/interactionprofiles/HTCViveControllerProfile.hpp>
 #include <core/openxr/interactionprofiles/OculusTouchControllerProfile.hpp>
 #include <core/openxr/interactionprofiles/ValveIndexControllerProfile.hpp>
+#include <core/openxr/interactionprofiles/EyeGazeInteractionProfile.hpp>
 
 #include <map>
+#include <exception>
 
 namespace sibr
 {
-    OpenXRInput::OpenXRInput(XrInstance &instance, XrSession &session, XrSpace& refSpace) : m_instance(instance),
+    OpenXRInput::OpenXRInput(XrInstance &instance, XrSession &session, XrSpace& refSpace, bool enableEyeGaze) : m_instance(instance),
                                                                          m_session(session),
-                                                                         m_refSpace(refSpace)
+                                                                         m_refSpace(refSpace),
+                                                                         m_eyeGazeEnabled(enableEyeGaze)
     {
         if (!createActions())
         {
@@ -31,6 +34,28 @@ namespace sibr
         registerInteractionProfile(HTCViveControllerProfile());
         registerInteractionProfile(OculusTouchControllerProfile());
         registerInteractionProfile(ValveIndexControllerProfile());
+        if (m_eyeGazeEnabled)
+        {
+            {
+#ifdef _WIN32
+                char *value = nullptr;
+                size_t length = 0;
+                if (_dupenv_s(&value, &length, "EYENAVGS_GAZE_SAMPLE_TIME") == 0 && value != nullptr)
+                {
+                    m_chainGazeSampleTime = (value[0] != '0');
+                    free(value);
+                }
+#else
+                const char *value = std::getenv("EYENAVGS_GAZE_SAMPLE_TIME");
+                if (value != nullptr)
+                    m_chainGazeSampleTime = (value[0] != '0');
+#endif
+                SIBR_LOG << "[EyeTracking] XrEyeGazeSampleTimeEXT chaining: " << (m_chainGazeSampleTime ? "on" : "off") << std::endl;
+            }
+            // XR_EXT_eye_gaze_interaction: its interaction profile must be suggested in its own
+            // xrSuggestInteractionProfileBindings() call, before the action set is attached (below).
+            registerInteractionProfile(EyeGazeInteractionProfile());
+        }
 
         if (!attachActionSet())
         {
@@ -41,6 +66,18 @@ namespace sibr
     OpenXRInput::~OpenXRInput()
     {
         XrResult result;
+        // Action spaces are children of the session (m_session is a reference to the HMD's session
+        // handle, reset to XR_NULL_HANDLE when the runtime already destroyed the session)
+        if (m_session != XR_NULL_HANDLE)
+        {
+            for (auto space : m_xrSpaces)
+            {
+                result = xrDestroySpace(space.second);
+                xrCheck(m_instance, result, "Failed to destroy action space!");
+            }
+        }
+        m_xrSpaces.clear();
+
         for (auto action : m_xrActions)
         {
             result = xrDestroyAction(action.second);
@@ -63,21 +100,26 @@ namespace sibr
         actionsSyncInfo.next = NULL;
         actionsSyncInfo.countActiveActionSets = 1;
         actionsSyncInfo.activeActionSets = &activeActionSet;
+        XR_TRACE("xrSyncActions ->");
         XrResult result = xrSyncActions(m_session, &actionsSyncInfo);
+        XR_TRACE("xrSyncActions <- " << result);
         if (!xrCheck(m_instance, result, "failed to sync actions!"))
         {
             return false;
         }
 
         // Extract all input events and dispatch callbacks
+        XR_TRACE("controller events ->");
         handleTrackpadEvent(Hand::LEFT);
         handleTrackpadEvent(Hand::RIGHT);
         handleThumbstickEvent(Hand::LEFT);
         handleThumbstickEvent(Hand::RIGHT);
         handleTriggerEvent(Hand::LEFT);
         handleTriggerEvent(Hand::RIGHT);
+        XR_TRACE("controller events <-");
 
         locateSpaces(time);
+        XR_TRACE("locateSpaces <-");
 
         return true;
     }
@@ -142,6 +184,15 @@ namespace sibr
         createAction(OpenXRInputType::RIGHT_TRIGGER, XR_ACTION_TYPE_FLOAT_INPUT, "right_trigger");
         createAction(OpenXRInputType::LEFT_AIM_POSE, XR_ACTION_TYPE_POSE_INPUT, "left_aim_pose");
         createAction(OpenXRInputType::RIGHT_AIM_POSE, XR_ACTION_TYPE_POSE_INPUT, "right_aim_pose");
+        if (m_eyeGazeEnabled)
+        {
+            // Creates the action and its action space (see createAction())
+            if (!createAction(OpenXRInputType::EYE_GAZE_POSE, XR_ACTION_TYPE_POSE_INPUT, "eye_gaze_pose"))
+            {
+                SIBR_WRG << "Failed to create the eye gaze action: eye gaze will not be recorded" << std::endl;
+                m_eyeGazeEnabled = false;
+            }
+        }
 
         return true;
     }
@@ -203,9 +254,147 @@ namespace sibr
         return xrCheck(m_instance, result, "failed to attach action set");
     }
 
+    void OpenXRInput::locateEyeGaze(XrTime time)
+    {
+        m_eyeGaze.isActive = false;
+        m_eyeGaze.locationFlags = 0;
+        m_eyeGaze.sampleTime = 0;
+
+        if (!m_eyeGazeEnabled || !m_eyeGazeQueryAllowed)
+        {
+            return;
+        }
+
+        // Some API layers implementing XR_EXT_eye_gaze_interaction throw C++ exceptions through the
+        // OpenXR C API (seen with the VIVE OpenXR eye tracking layer when its SRanipal backend has no data).
+        // Do not let that kill the recording: report it, disable eye gaze and keep recording head poses.
+        try
+        {
+            locateEyeGazeUnchecked(time);
+        }
+        catch (const std::exception &e)
+        {
+            SIBR_WRG << "[EyeTracking] The OpenXR runtime/API layer threw an exception while reading the eye gaze: '"
+                     << e.what() << "'. Eye gaze is disabled for this session (GazeValid=0)." << std::endl;
+            m_eyeGazeEnabled = false;
+            m_eyeGaze.isActive = false;
+            m_eyeGaze.locationFlags = 0;
+        }
+        catch (...)
+        {
+            SIBR_WRG << "[EyeTracking] The OpenXR runtime/API layer threw an unknown exception while reading the eye gaze. "
+                     << "Eye gaze is disabled for this session (GazeValid=0)." << std::endl;
+            m_eyeGazeEnabled = false;
+            m_eyeGaze.isActive = false;
+            m_eyeGaze.locationFlags = 0;
+        }
+    }
+
+    void OpenXRInput::locateEyeGazeUnchecked(XrTime time)
+    {
+        auto spaceIt = m_xrSpaces.find(OpenXRInputType::EYE_GAZE_POSE);
+        XrAction action = getXrAction(OpenXRInputType::EYE_GAZE_POSE);
+        if (spaceIt == m_xrSpaces.end() || !action)
+        {
+            return;
+        }
+
+        XrActionStatePose actionState{ XR_TYPE_ACTION_STATE_POSE };
+        actionState.next = NULL;
+        XrActionStateGetInfo getInfo{ XR_TYPE_ACTION_STATE_GET_INFO };
+        getInfo.next = NULL;
+        getInfo.action = action;
+        getInfo.subactionPath = XR_NULL_PATH;
+        XR_TRACE("xrGetActionStatePose(eye gaze) ->");
+        XrResult result = xrGetActionStatePose(m_session, &getInfo, &actionState);
+        XR_TRACE("xrGetActionStatePose(eye gaze) <- " << result << " isActive=" << actionState.isActive);
+        if (XR_FAILED(result))
+        {
+            return;
+        }
+        m_eyeGaze.isActive = (actionState.isActive == XR_TRUE);
+        if (!m_eyeGaze.isActive)
+        {
+            // Not bound (yet) or eye tracker not available: nothing to locate
+            return;
+        }
+
+        // XrEyeGazeSampleTimeEXT can be chained to get the time of the eye tracker sample
+        XrEyeGazeSampleTimeEXT eyeGazeSampleTime{ XR_TYPE_EYE_GAZE_SAMPLE_TIME_EXT };
+        eyeGazeSampleTime.next = NULL;
+        eyeGazeSampleTime.time = 0;
+        XrSpaceLocation location{ XR_TYPE_SPACE_LOCATION };
+        location.next = m_chainGazeSampleTime ? &eyeGazeSampleTime : NULL;
+        XR_TRACE("xrLocateSpace(eye gaze) ->");
+        result = xrLocateSpace(spaceIt->second, m_refSpace, time, &location);
+        XR_TRACE("xrLocateSpace(eye gaze) <- " << result << " flags=" << location.locationFlags);
+        if (XR_FAILED(result))
+        {
+            // Be tolerant with runtimes/layers that would not accept the chained structure
+            location.next = NULL;
+            location.locationFlags = 0;
+            eyeGazeSampleTime.time = 0;
+            result = xrLocateSpace(spaceIt->second, m_refSpace, time, &location);
+            if (XR_FAILED(result))
+            {
+                return;
+            }
+        }
+
+        m_eyeGaze.locationFlags = location.locationFlags;
+        m_eyeGaze.sampleTime = eyeGazeSampleTime.time;
+        if (location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT)
+        {
+            m_eyeGaze.pose = location.pose;
+        }
+    }
+
+    void OpenXRInput::logEyeGazeChanges()
+    {
+        // Diagnostics: log transitions of the gaze action state / location flags (rate limited)
+        static const int kMaxLoggedChanges = 30;
+        if (m_eyeGaze.isActive != m_lastLoggedGazeActive)
+        {
+            SIBR_LOG << "[EyeTracking] gaze action isActive: " << (m_lastLoggedGazeActive ? "true" : "false")
+                     << " -> " << (m_eyeGaze.isActive ? "true" : "false") << std::endl;
+            m_lastLoggedGazeActive = m_eyeGaze.isActive;
+        }
+        const XrSpaceLocationFlags relevantFlags = m_eyeGaze.locationFlags &
+            (XR_SPACE_LOCATION_ORIENTATION_VALID_BIT | XR_SPACE_LOCATION_POSITION_VALID_BIT |
+             XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT | XR_SPACE_LOCATION_POSITION_TRACKED_BIT);
+        if (relevantFlags != m_lastLoggedGazeFlags)
+        {
+            if (m_loggedGazeFlagChanges < kMaxLoggedChanges)
+            {
+                auto describe = [](XrSpaceLocationFlags f) {
+                    std::string s;
+                    s += (f & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) ? "O" : "-";
+                    s += (f & XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT) ? "o" : "-";
+                    s += (f & XR_SPACE_LOCATION_POSITION_VALID_BIT) ? "P" : "-";
+                    s += (f & XR_SPACE_LOCATION_POSITION_TRACKED_BIT) ? "p" : "-";
+                    return s;
+                };
+                SIBR_LOG << "[EyeTracking] gaze location flags (O/o: orientation valid/tracked, P/p: position valid/tracked): "
+                         << describe(m_lastLoggedGazeFlags) << " -> " << describe(relevantFlags)
+                         << (m_loggedGazeFlagChanges + 1 == kMaxLoggedChanges ? "  (further changes are not logged)" : "") << std::endl;
+            }
+            ++m_loggedGazeFlagChanges;
+            m_lastLoggedGazeFlags = relevantFlags;
+        }
+    }
+
     bool OpenXRInput::locateSpaces(XrTime time) {
+        locateEyeGaze(time);
+        if (m_eyeGazeEnabled)
+        {
+            logEyeGazeChanges();
+        }
+
         for (const auto& space: m_xrSpaces)
         {
+            if (space.first == OpenXRInputType::EYE_GAZE_POSE) {
+                continue; // handled by locateEyeGaze()
+            }
             XrAction action = getXrAction(space.first);
             if (!action) {
                 continue;

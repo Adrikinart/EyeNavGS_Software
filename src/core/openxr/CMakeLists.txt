@@ -28,6 +28,14 @@ target_link_libraries(${PROJECT_NAME}
 
 add_definitions(-DSIBR_OPENXR_EXPORTS -DBOOST_ALL_DYN_LINK)
 
+if (MSVC)
+    # Use /EHs instead of the default /EHsc: with /EHsc the compiler assumes that extern "C" functions
+    # (all the xr* OpenXR entry points) never throw, and removes the try/catch around them. Some OpenXR
+    # API layers (e.g. the VIVE eye tracking layer) can throw C++ exceptions through the OpenXR API;
+    # /EHs lets us catch them and degrade gracefully instead of crashing (see OpenXRInput::locateEyeGaze).
+    target_compile_options(${PROJECT_NAME} PRIVATE /EHs)
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${SIBR_FOLDER})
 
 ## High level macro to install in an homogen way all our ibr targets

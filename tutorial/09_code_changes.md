@@ -1,15 +1,15 @@
 # 9. What was changed in the code
 
-Compared with the upstream EyeNavGS branch `sibr_gaussian_VR_viewer` (commit `87d02bf`).
+Compared with the upstream EyeNavGS branch `sibr_gaussian_VR_viewer` (commit `87d02bf`). This fork also merges commit `8d8811d`, "clean up OpenXR build and initial scale handling": `sibr_openxr` in C++20, and an `initial_scale` member.
 
 ## Build
 
 | File | Change |
 |---|---|
 | `CMakeLists.txt` | Sets `CMAKE_POLICY_VERSION_MINIMUM=3.5` with CMake ≥ 4.0, for old third-party libraries (xatlas, glm). |
-| `src/core/openxr/OpenXRHMD.cpp` | Removed the C++20 designated initializers; the project builds as C++14. |
-| `src/core/openxr/OpenXRRdrMode.cpp` | Removed the undeclared `initial_sacle`. |
-| `src/core/openxr/CMakeLists.txt` | `/EHs` instead of `/EHsc`, so C++ exceptions thrown by OpenXR layers through the C API can be caught. |
+| `src/core/openxr/OpenXRHMD.cpp` | No more C++20 designated initializers, so the code also builds in C++14 (`sibr_openxr` itself is compiled as C++20, from `8d8811d`). |
+| `src/core/openxr/OpenXRRdrMode.{hpp,cpp}` | The undeclared `initial_sacle` became the `initial_scale` member (`8d8811d`). |
+| `src/core/openxr/CMakeLists.txt` | `/EHs` instead of `/EHsc`, so C++ exceptions thrown by OpenXR layers through the C API can be caught; C++20 (`8d8811d`). |
 
 ## Eye tracking (`src/core/openxr/`)
 

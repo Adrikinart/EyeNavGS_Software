@@ -127,8 +127,8 @@ namespace sibr
         }
 
         m_openxrHmd = std::make_unique<OpenXRHMD>("Gaussian splatting");
-        // (upstream had 'initial_sacle = scale;' here: an undeclared identifier that broke the build;
-        //  the scale is already forwarded to the HMD through setInitialPose())
+        // (upstream had 'initial_sacle = scale;': an undeclared identifier that broke the build)
+        initial_scale = scale;
         m_openxrHmd->setInitialPose(ipos, iq, scale);
         if (!m_openxrHmd->init()) {
             SIBR_ERR << "Failed to connect to OpenXR" << std::endl;

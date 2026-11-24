@@ -36,7 +36,11 @@ if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /EHs)
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${SIBR_FOLDER})
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    FOLDER ${SIBR_FOLDER}
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
 
 ## High level macro to install in an homogen way all our ibr targets
 include(install_runtime)

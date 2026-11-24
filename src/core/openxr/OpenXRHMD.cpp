@@ -1057,7 +1057,7 @@ namespace sibr
         viewLocateInfo.displayTime = m_lastFrameState.predictedDisplayTime;
         viewLocateInfo.space = m_playSpace;
 
-        // Note: avoid C++20 designated initializers, the project is compiled in C++14 with MSVC
+        // (no designated initializers: they need C++20, and the rest of SIBR is compiled in C++14)
         XrViewState view_state{XR_TYPE_VIEW_STATE};
         view_state.next = NULL;
         XR_TRACE("xrLocateViews ->");

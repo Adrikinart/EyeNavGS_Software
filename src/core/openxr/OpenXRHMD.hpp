@@ -474,6 +474,8 @@ namespace sibr
         XrCompositionLayerProjectionView *m_projectionViews = NULL;
         // Array of views, filled by the runtime with current HMD display pose
         XrView *views = NULL;
+        // View poses before --initial-scale (what the eyes really are in the play space), submitted to the compositor
+        std::vector<XrPosef> m_layerViewPoses;
 
         // Array of handles for swapchains
         XrSwapchain *m_swapchains = NULL;

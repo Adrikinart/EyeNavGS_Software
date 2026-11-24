@@ -57,6 +57,10 @@ Example row (left eye, valid gaze):
   - Positions are then scaled by `--initial-scale` around the initial position.
   - The controller-driven offset ("Movement") is added to both the eye positions and the gaze origin.
   - No axis flip is applied in the CSV.
+- **Units:** positions are in metres only without initialization (`--initial-scale 1`). Otherwise they are in scene units: with a spawn file, `units_per_metre` of `eyenavgs_spawn.json` (6.3 for *figurines*). To get back to STAGE metres with `t`, `R` the initial position and rotation and `s` the scale:
+  - `p_stage = R·(t + (p − t)/s) + t`;
+  - `R_stage = R·R_csv`.
+  - Distances divided by `s` are metres.
 - **To go to the 3DGS scene frame** (+y down, +z forward), do what the renderer does with *Y-Invert scene* checked (the default): with `F = diag(1, −1, −1)`, use `p_3dgs = F·p` and `R_3dgs = F·R`, for eye and gaze poses alike.
 - To reproduce a live session or compare it with the dataset, use the **same** `--initial-*` values as during the recording. The replay modes do not need them: the recorded poses already include the initialization.
 

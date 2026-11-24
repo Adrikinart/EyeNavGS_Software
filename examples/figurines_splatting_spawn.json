@@ -1,0 +1,72 @@
+{
+  "scene": "figurines_splatting",
+  "generated_by": "utils/SceneSpawn/compute_spawn.py",
+  "generated_on": "2026-11-24",
+  "viewer_args": [
+    "--initial-position",
+    "-0.130858",
+    "0.866114",
+    "-0.167989",
+    "--initial-quaternion",
+    "-0.284109",
+    "-0.4068212",
+    "0.0334063",
+    "0.8675613",
+    "--initial-scale",
+    "6.3"
+  ],
+  "launcher_args": "-InitialPosition \"-0.130858 0.866114 -0.167989\" -InitialQuaternion \"-0.284109 -0.4068212 0.0334063 0.8675613\" -InitialScale 6.3",
+  "initial_position": [
+    -0.130858,
+    0.866114,
+    -0.167989
+  ],
+  "initial_quaternion_xyzw": [
+    -0.284109,
+    -0.4068212,
+    0.0334063,
+    0.8675613
+  ],
+  "initial_scale": 6.3,
+  "units_per_metre": 6.3,
+  "scale_source": "measured: Rubik's cube (5.7 cm) = 0.35-0.36 units; bar-height table 1.05 m and 0.92 m wide; photos taken from 1.39 m",
+  "scene_frame": {
+    "up": [
+      0.2891270850481482,
+      -0.8363322426759118,
+      -0.46578311321068794
+    ],
+    "floor_point_under_spawn": [
+      0.3925753339749902,
+      9.561568978816778,
+      1.711634139313785
+    ],
+    "facing": [
+      -0.6869026755007639,
+      -0.5201446307324498,
+      0.5075571667409454
+    ],
+    "content_point": [
+      -0.5537800850832177,
+      1.1148669877255755,
+      0.5638802365111701
+    ]
+  },
+  "metres": {
+    "spawn_to_content_horizontal": 0.7080968314867545,
+    "content_above_floor": 1.1627359717047139,
+    "camera_height_above_floor_median": 1.3868344523256348
+  },
+  "tilt_of_uncorrected_scene_deg": 33.24518369023157,
+  "nearest_training_camera": {
+    "index": 59,
+    "img_name": "frame_00060.jpg"
+  },
+  "checks": {
+    "stage_origin_to_floor_point_error_units": 5.781047849731574e-06,
+    "one_metre_up_in_units": 6.300000002874541,
+    "stage_up_vs_floor_normal_deg": 5.7905745997743736e-06,
+    "stage_forward_vs_content_deg": 0.0
+  },
+  "usage": "Stand in the middle of the SteamVR play area, facing its forward direction (Room Setup)."
+}

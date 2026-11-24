@@ -15,11 +15,16 @@
       this launch only, through the OpenXR loader environment variables (no admin rights needed);
    4. the SRanipal runtime (SR_Runtime) matching the VIVE layer (1.3.6.x, shipped with VIVE Console) is
       running. An older SR_Runtime (e.g. the standalone 1.3.2 from 2021) makes the VIVE layer abort the app.
+  The start position, level and real-world scale of the scene come from <scene>\eyenavgs_spawn.json when it
+  exists (made by utils\SceneSpawn\compute_spawn.py, see tutorial/04_scenes.md), unless -Initial* values are given.
   After the session, every new trace is checked with utils\CheckTrace\check_trace.py (if Python is found).
   See tutorial/05_recording.md.
 
 .EXAMPLE
   .\scripts\windows\record_vive_pro_eye.ps1 -Scene D:\scenes\truck -Participant P01
+.EXAMPLE
+  # Scene with an eyenavgs_spawn.json (natural spawn and scale): nothing else to give
+  .\scripts\windows\record_vive_pro_eye.ps1 -Scene C:\scenes\figurines_splatting -Participant P01 -Duration 120
 .EXAMPLE
   # Fixed 120 s recording starting automatically, with the 'truck' initialization of the EyeNavGS paper
   .\scripts\windows\record_vive_pro_eye.ps1 -Scene D:\scenes\truck -Participant P01 -Duration 120 `
@@ -34,6 +39,8 @@ param(
     [string]$InitialPosition = "",                 # "X Y Z"
     [string]$InitialQuaternion = "",               # "QX QY QZ QW"
     [string]$InitialScale = "",                    # "S"
+    [string]$SpawnFile = "",                       # default: <Scene>\eyenavgs_spawn.json when it exists
+    [switch]$NoSpawn,                              # ignore the spawn file (raw scene orientation and scale)
     [string]$Iteration = "",                       # 3DGS iteration to load (default: largest)
     [ValidateSet("auto", "htc", "ext", "fb", "none")][string]$EyeTracking = "auto",
     [string]$Exe = "",                             # default: <repo>\install\bin\SIBR_gaussianViewer_app.exe
@@ -62,6 +69,31 @@ $plys = @(Get-ChildItem (Join-Path $Scene "point_cloud") -Directory -Filter "ite
 if (-not $plys) { Fail "No point_cloud\iteration_*\point_cloud.ply in $Scene" }
 Write-Ok "Scene: $Scene ($(($plys | ForEach-Object Name) -join ', '))"
 $sceneName = Split-Path $Scene -Leaf
+
+# --- Spawn: start position, level floor and real-world scale (utils\SceneSpawn\compute_spawn.py) ---------
+$spawnArgs = @()
+$spawnUsed = ""
+if ($InitialPosition -or $InitialQuaternion -or $InitialScale) {
+    Write-Ok "Scene initialization given on the command line (no spawn file used)"
+} elseif (-not $NoSpawn) {
+    $spawnRequested = [bool]$SpawnFile
+    if (-not $SpawnFile) { $SpawnFile = Join-Path $Scene "eyenavgs_spawn.json" }
+    if (Test-Path $SpawnFile) {
+        try { $spawn = Get-Content -Raw -Encoding UTF8 $SpawnFile | ConvertFrom-Json }
+        catch { Fail "Cannot read the spawn file $SpawnFile ($($_.Exception.Message))" }
+        # viewer_args holds the values as strings: no culture-dependent number formatting here
+        $spawnArgs = @($spawn.viewer_args | ForEach-Object { [string]$_ })
+        if ($spawnArgs.Count -ne 11 -or $spawnArgs[0] -ne "--initial-position" -or $spawnArgs[4] -ne "--initial-quaternion" -or $spawnArgs[9] -ne "--initial-scale") {
+            Fail "Unexpected 'viewer_args' in $SpawnFile (re-create it with utils\SceneSpawn\compute_spawn.py)"
+        }
+        $spawnUsed = (Resolve-Path $SpawnFile).Path
+        Write-Ok ("Spawn: {0} (scale {1} scene units per metre; stand in the middle of the play area, facing its forward direction)" -f $spawnUsed, $spawnArgs[10])
+    } elseif ($spawnRequested) {
+        Fail "Spawn file not found: $SpawnFile"
+    } else {
+        Write-Warn "No eyenavgs_spawn.json in the scene: raw scene orientation and scale (create one with utils\SceneSpawn\compute_spawn.py, see tutorial/04_scenes.md)"
+    }
+}
 
 # --- 2. OpenXR runtime -------------------------------------------------------------------------------
 $active = Get-ActiveOpenXRRuntime
@@ -125,14 +157,16 @@ if ($Iteration) { $viewerArgs += @("--iteration", $Iteration) }
 if ($InitialPosition) { $viewerArgs += @("--initial-position") + @($InitialPosition -split "[\s,]+" | Where-Object { $_ }) }
 if ($InitialQuaternion) { $viewerArgs += @("--initial-quaternion") + @($InitialQuaternion -split "[\s,]+" | Where-Object { $_ }) }
 if ($InitialScale) { $viewerArgs += @("--initial-scale", $InitialScale) }
+$viewerArgs += $spawnArgs
 if ($Duration -gt 0) { $viewerArgs += @("--record-trace", "--record-duration", ([string]$Duration)) }
 
 $before = @(Get-ChildItem $OutDir -Filter *.csv -ErrorAction SilentlyContinue | ForEach-Object FullName)
 $logFile = Join-Path $OutDir "viewer_console.log"
+if ($spawnUsed) { Copy-Item $spawnUsed (Join-Path $OutDir "eyenavgs_spawn.json") -Force }
 @(
     "scene=$Scene", "participant=$Participant", "date=$(Get-Date -Format o)",
-    "viewer=$Exe", "args=$($viewerArgs -join ' ')", "EYENAVGS_EYE_TRACKING=$env:EYENAVGS_EYE_TRACKING",
-    "XR_ENABLE_API_LAYERS=$env:XR_ENABLE_API_LAYERS"
+    "viewer=$Exe", "args=$($viewerArgs -join ' ')", "spawn_file=$spawnUsed",
+    "EYENAVGS_EYE_TRACKING=$env:EYENAVGS_EYE_TRACKING", "XR_ENABLE_API_LAYERS=$env:XR_ENABLE_API_LAYERS"
 ) | Set-Content -Encoding utf8 (Join-Path $OutDir "session_info.txt")
 
 Write-Host ""

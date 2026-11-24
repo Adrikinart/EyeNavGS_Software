@@ -1065,8 +1065,11 @@ namespace sibr
         XR_TRACE("xrLocateViews <- " << result);
         if (!xrCheck(m_instance, result, "Could not locate views"))
             return false;
-        // Scaling the position
+        // Scaling the position (virtual camera only). The compositor gets the unscaled pose, where the eye really
+        // is in the play space: the scene is scaled around the user, the user does not move (see submitFrame).
+        m_layerViewPoses.resize(m_viewCount);
         for (uint32_t i = 0; i < m_viewCount; i++) {
+            m_layerViewPoses[i] = views[i].pose;
             views[i].pose.position = applyInitialScale(views[i].pose.position);
         }
 
@@ -1433,8 +1436,8 @@ namespace sibr
             if (!xrCheck(m_instance, result, "failed to wait for swapchain image!"))
                 break;
 
-            // Update projection views
-            m_projectionViews[i].pose = views[i].pose;
+            // Update projection views (unscaled pose: --initial-scale only changes the virtual camera)
+            m_projectionViews[i].pose = i < m_layerViewPoses.size() ? m_layerViewPoses[i] : views[i].pose;
             m_projectionViews[i].fov = views[i].fov;
 
             // Let's call renderFunc to delegate the rendering to the calling function

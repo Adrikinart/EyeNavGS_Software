@@ -18,6 +18,7 @@ Compared with the upstream EyeNavGS branch `sibr_gaussian_VR_viewer` (commit `87
 | `OpenXRHMD.{hpp,cpp}` | Eye-tracking backend selection (FB / HTC / EXT / none, `EYENAVGS_EYE_TRACKING`); `XR_HTC_eye_tracker` support (per-eye gaze, pupil, openness, with range checks); unified `GazeSample` API and `getEyeTrackingStatus()`. Gaze is only queried when the app is focused and the head has been tracked for 1 s. The HTC tracker is created lazily: the VIVE layer `abort()`s the process if SRanipal cannot start, and that cannot be caught. |
 | `OpenXRHMD.{hpp,cpp}` (FB path) | FB eye tracker destroyed before its session; FB gaze query time set (it was 0); FB gaze no longer re-scaled when the query fails. |
 | `OpenXRHMD.{hpp,cpp}` (other) | Missing `break`s in `pollEvents()`; null check of the input during shutdown. |
+| `OpenXRHMD.{hpp,cpp}` (scale) | With `--initial-scale` ≠ 1, the compositor used to receive the scaled eye positions. It now gets the real ones: the scale only changes the virtual camera. Nothing changes at scale 1. |
 | `OpenXRHTCEyeTracker.h` (new) | Declarations of the vendor extension `XR_HTC_eye_tracker` (not in `openxr.h`), from HTC's VIVE-OpenXR sources, cross-checked with the layer DLL. |
 | `OpenXRInput.{hpp,cpp}`, `OpenXRInputType.h`, `interactionprofiles/EyeGazeInteractionProfile.{hpp,cpp}` (new) | `XR_EXT_eye_gaze_interaction` (gaze action, bindings, located in the play space); exceptions from layers caught; logs of gaze state changes; action spaces destroyed. |
 | `OpenXRHelper.hpp` | Opt-in OpenXR call tracing (`EYENAVGS_GAZE_DEBUG=1`). |
@@ -36,10 +37,12 @@ Compared with the upstream EyeNavGS branch `sibr_gaussian_VR_viewer` (commit `87
 | `scripts/windows/common.ps1` | Shared helpers: Visual Studio/CUDA detection, Steam libraries, VIVE Console, OpenXR registry (64-bit view), SR_Runtime. |
 | `scripts/windows/check_environment.ps1` | Read-only check of the PC against the requirements. |
 | `scripts/windows/build_eyenavgs.ps1` | Configure + build + install. |
-| `scripts/windows/record_vive_pro_eye.ps1` | Pre-flight checks, SR_Runtime 1.3.6.x, VIVE layer, launch, post-session trace check. |
-| `utils/CheckTrace/check_trace.py` | Trace validator (standard library only). |
+| `scripts/windows/record_vive_pro_eye.ps1` | Pre-flight checks, SR_Runtime 1.3.6.x, VIVE layer, scene spawn file, launch, post-session trace check. |
+| `utils/CheckTrace/check_trace.py` | Trace validator (standard library only). Reports distances in cm using the spawn file's scale. |
+| `utils/SceneSpawn/compute_spawn.py` | Natural spawn: floor, up and start spot estimated from the scene, real-world scale, solved into the viewer's `--initial-*` values. No viewer change: it uses the existing initialization. |
 | `examples/sample_trace_vive_pro_eye.csv` | Real sample trace. |
-| `.github/workflows/tutorial-checks.yml` | CI: PowerShell syntax (Windows PowerShell 5.1) + checker on the sample. |
+| `examples/figurines_splatting_spawn.json` | Spawn of the example scene (measured scale). |
+| `.github/workflows/tutorial-checks.yml` | CI: PowerShell syntax (Windows PowerShell 5.1), checker on the sample, spawn maths self-test. |
 
 ---
 [← 8. Troubleshooting](08_troubleshooting.md) · [Tutorial index](README.md)

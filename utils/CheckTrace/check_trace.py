@@ -18,16 +18,19 @@ Checks performed
   * gaze eccentricity: angle between the head forward axis and the gaze axis
     (both use the OpenXR convention: -Z is forward). With a working eye tracker this is
     typically a few degrees to ~30 degrees; it is exactly 0 when no gaze data is recorded.
-  * distance between the gaze origin and the eye/head position
+  * distance between the gaze origin and the eye/head position (in cm: trace positions are divided by the
+    scene units per metre of the eyenavgs_spawn.json found next to the trace, or of --units-per-metre)
 
 Usage
-  python check_trace.py <trace.csv> [--plot]
+  python check_trace.py <trace.csv> [--plot] [--units-per-metre U]
 
 Exit code: 0 if the trace contains valid eye-tracking data, 1 if it does not, 2 on format errors.
 """
 import argparse
 import csv
+import json
 import math
+import os
 import statistics
 import sys
 
@@ -78,7 +81,27 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("csv", help="trace CSV recorded in headset mode")
     ap.add_argument("--plot", action="store_true", help="plot gaze eccentricity over time (needs matplotlib)")
+    ap.add_argument("--units-per-metre", type=float,
+                    help="trace position units per metre (default: from eyenavgs_spawn.json next to the trace, else 1)")
     args = ap.parse_args()
+
+    # Positions are in metres only without scene initialization (--initial-scale 1). The recording script copies the
+    # spawn file it used (utils/SceneSpawn) into the session folder.
+    units_per_metre, units_source = 1.0, "metres (no eyenavgs_spawn.json next to the trace)"
+    spawn_file = os.path.join(os.path.dirname(os.path.abspath(args.csv)), "eyenavgs_spawn.json")
+    if args.units_per_metre:
+        units_per_metre, units_source = args.units_per_metre, "--units-per-metre"
+    elif os.path.isfile(spawn_file):
+        try:
+            with open(spawn_file, encoding="utf-8") as sf:
+                units_per_metre = float(json.load(sf)["units_per_metre"])
+            units_source = spawn_file
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            print(f"WARNING        : cannot read {spawn_file} ({e}); positions assumed in metres")
+            units_source = "metres (unreadable eyenavgs_spawn.json)"
+    if units_per_metre <= 0:
+        print("ERROR: --units-per-metre must be > 0")
+        return 2
 
     with open(args.csv, newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
@@ -99,6 +122,7 @@ def main():
 
     print(f"File           : {args.csv}")
     print(f"Columns        : {len(header)} -> {','.join(header)}")
+    print(f"Position units : {units_per_metre:g} per metre ({units_source})")
     bad_len = [i for i, r in enumerate(rows) if len(r) != len(header)]
     if bad_len:
         print(f"WARNING        : {len(bad_len)} row(s) do not have {len(header)} fields "
@@ -150,7 +174,7 @@ def main():
             ecc.append(angle_deg(head_fwd, gaze_fwd))
             hp = (f(r, "PositionX"), f(r, "PositionY"), f(r, "PositionZ"))
             gp = (f(r, "GazePosX"), f(r, "GazePosY"), f(r, "GazePosZ"))
-            origin_dist.append(math.dist(hp, gp) * 100.0)
+            origin_dist.append(math.dist(hp, gp) * 100.0 / units_per_metre)
 
     print(f"|head quat|    : {describe(head_norms)}")
     print(f"|gaze quat|    : {describe(gaze_norms)}")

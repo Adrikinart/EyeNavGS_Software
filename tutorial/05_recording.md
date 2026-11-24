@@ -5,7 +5,8 @@
 - [ ] Base stations on, headset tracked (solid icon in SteamVR).
 - [ ] SteamVR is the active OpenXR runtime (`powershell -ExecutionPolicy Bypass -File scripts\windows\check_environment.ps1 -VROnly`).
 - [ ] Participant calibrated ([step 3.5](03_vr_eye_tracking_setup.md#35-eye-calibration-each-participant-each-session)).
-- [ ] Scene folder ready; initialization values known ([step 4](04_scenes.md)).
+- [ ] Scene folder ready, with its `eyenavgs_spawn.json` or known initialization values ([step 4](04_scenes.md#scene-initialization-tilt-scale-start-position)).
+- [ ] Participant in the middle of the play area, facing its forward direction (the direction chosen in Room Setup). With a spawn file, they then face the content.
 
 ## 5.2 Launch with the script
 
@@ -20,7 +21,7 @@ powershell -ExecutionPolicy Bypass -File scripts\windows\record_vive_pro_eye.ps1
 
 Before launching the viewer, the script:
 
-1. checks the viewer build and the scene folder;
+1. checks the viewer build and the scene folder, and reads the scene's `eyenavgs_spawn.json` if there is one and no `-Initial*` value is given;
 2. checks that SteamVR is the OpenXR runtime;
 3. enables the VIVE eye-tracking layer for this session if it is off in SteamVR;
 4. makes sure **SR_Runtime 1.3.6.x** is the SRanipal runtime that runs ([why](03_vr_eye_tracking_setup.md#33-the-sranipal-version-trap)).
@@ -32,7 +33,9 @@ Before launching the viewer, the script:
 | `-OutDir` | Output folder (default `<repo>\recordings\<scene>\<participant>_<yyyyMMdd_HHmmss>\`, or `session_<...>` without `-Participant`). |
 | `-Duration` | > 0: automatic recording of N seconds. |
 | `-Downscale` | 1–8, divides the per-eye rendering resolution (higher = faster, [§5.5](#55-frame-rate--sampling-rate)). |
-| `-InitialPosition`, `-InitialQuaternion`, `-InitialScale` | Scene initialization ([step 4](04_scenes.md#scene-initialization-tilt-scale-start-position)). |
+| `-InitialPosition`, `-InitialQuaternion`, `-InitialScale` | Scene initialization ([step 4](04_scenes.md#scene-initialization-tilt-scale-start-position)). Takes precedence over a spawn file. |
+| `-SpawnFile <json>` | Spawn file to use (default: `<scene>\eyenavgs_spawn.json` if it exists). |
+| `-NoSpawn` | Ignore the spawn file: raw scene orientation and scale. |
 | `-Iteration` | 3DGS iteration to load (default: the largest). |
 | `-EyeTracking` | `auto` (default), `htc`, `ext`, `fb`, `none`. |
 | `-SkipSRanipal` | Do not check or start SR_Runtime. |
@@ -42,7 +45,8 @@ The output folder receives:
 
 - the trace(s) `<scene>_trace_<n>.csv`;
 - `viewer_console.log`, the full viewer output;
-- `session_info.txt`, with the arguments and environment.
+- `session_info.txt`, with the arguments and environment;
+- `eyenavgs_spawn.json`, a copy of the spawn file used, if any. `check_trace.py` reads its scale to report distances in cm.
 
 When you close the viewer, every new trace is checked with `check_trace.py` ([step 7](07_analysis.md)), provided a real Python is found. Otherwise the script says so and you can run it by hand.
 

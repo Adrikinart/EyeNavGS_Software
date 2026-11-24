@@ -5,6 +5,7 @@ This repository is a **tutorial-ready fork** of the [EyeNavGS software](https://
 - **HTC VIVE Pro Eye eye tracking** (OpenXR `XR_HTC_eye_tracker` through SteamVR + VIVE Console). It records per-eye gaze, pupil diameter and eye openness. The original code only supported the Meta Quest Pro (`XR_FB_eye_tracking_social`).
 - **A build that works with current toolchains**: VS 2022 Build Tools (or VS 2026 with the v143 toolset and the CUDA integration), CUDA 12.x, CMake 4.x.
 - **Fixed recording bugs**: gaze lost after the first blink, values truncated to 3 decimals, wrong headers, sessions appended to old files, ...
+- **Natural spawn with real-world scale** for any 3DGS scene: level floor, 1:1 scale, start next to the content ([`utils/SceneSpawn`](utils/SceneSpawn/README.md)). A ready-made spawn for the example scene *figurines* is included.
 - **Scripts** that check a PC, build, and run a recording session.
 - **A step-by-step tutorial** from a blank Windows PC to validated CSV traces.
 
@@ -53,7 +54,7 @@ Step 3 assumes the one-time VR setup is done (SteamVR, VIVE Console, base statio
 | OS / GPU | Windows 11 Pro 64-bit, NVIDIA RTX 3080 Ti (driver 610.88) |
 | Build | VS 2022 Build Tools (MSVC 14.44, toolset v143), CUDA 12.6, CMake 4.2, Git |
 | VR | HTC VIVE Pro Eye, SteamVR (OpenXR runtime), **VIVE Console for SteamVR** (eye-tracking OpenXR layer), **SR_Runtime 1.3.6.12** |
-| Analysis | Python 3.8+ (standard library only for `check_trace.py`) |
+| Analysis | Python 3.8+ (standard library only for `check_trace.py`; `numpy` for `compute_spawn.py`) |
 
 Two constraints matter more than exact versions:
 
@@ -84,8 +85,9 @@ GazeValid,GazeTracked,GazeSource,xr_display_time_ns,gaze_sample_time_ns,PupilDia
 scripts/windows/        check_environment.ps1, build_eyenavgs.ps1, record_vive_pro_eye.ps1, common.ps1
 tutorial/               the step-by-step tutorial (start at tutorial/README.md)
 utils/CheckTrace/       check_trace.py: trace validator
+utils/SceneSpawn/       compute_spawn.py: natural start position, level floor and real-world scale of a scene
 utils/...               original EyeNavGS tools (gaze overlay, CSV<->JSON, world coordinates, scene selector)
-examples/               real sample trace (VIVE Pro Eye)
+examples/               real sample trace (VIVE Pro Eye), spawn file of the figurines scene
 src/core/openxr/        OpenXR HMD / input / eye tracking / recording (most changes are here)
 src/projects/gaussianviewer/  the 3DGS viewer application
 docs/ORIGINAL_README.md the original EyeNavGS README, lightly updated for this fork (desktop mode, replay, Meta Quest, utilities, SIBR)
